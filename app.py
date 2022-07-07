@@ -23,8 +23,12 @@ from user import User
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", None)
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", None)
 GOOGLE_DISCOVERY_URL = ("https://accounts.google.com/.well-known/openid-configuration")
-DATABASE_URL = os.environ.get("DATABASE_URL", None)
 
+# Find environment variables
+DATABASE_URL = os.environ.get("DATABASE_URL", None)
+# sqlalchemy deprecated urls which begin with "postgres://"; now it needs to start with "postgresql://"
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 # Create a new Flask instance
 app = Flask(__name__)
