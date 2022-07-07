@@ -54,7 +54,9 @@ def load_user(user_id):
 def index():
     if current_user.is_authenticated:
         return (
-            "<p>Hello, {}! You are already logged in!</p>".format(
+            "<p>Hello, {}! You are already logged in!</p>"
+            "<a class='button' href='/allPlayers'>See All Players</a>"
+            "<a class='button' href='/getLeague'>Compare Franchises</a>".format(
                 current_user.id
             )
         )
@@ -125,6 +127,13 @@ def callback():
         # Send user on to success page
         return redirect(url_for("success"))
 
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return '<p>You have been logged out! </p><a class="button" href="/">Return to App Homepage</a>' 
+
+
 @app.route("/allPlayers")
 @login_required
 def allPlayers():
@@ -137,3 +146,83 @@ def allPlayers():
     results = pd.read_sql(query, con)
 
     return render_template("allPlayers.html", tables=[results.to_html(classes='data')], titles=results.columns.values)
+
+@app.route('/getLeague')
+@login_required
+def getLeague():
+    return render_template("getLeague.html")
+
+@app.route('/compareFranchises')
+@login_required
+def compareFranchises():
+    league_id = request.args.get("leagueID")
+
+    # Get Franchises in the league
+    urlString = f"https://www54.myfantasyleague.com/2022/export?TYPE=league&L={league_id}"
+    response = requests.get(urlString)
+    soup = BeautifulSoup(response.content,'xml')
+    data = []
+    franchises = soup.find_all('franchise')
+    for i in range(len(franchises)):
+        rows = [franchises[i].get("id"), franchises[i].get("name")]
+        data.append(rows)
+    franchise_df = pd.DataFrame(data)
+    franchise_df.columns=['FranchiseID','FranchiseName']
+    franchise_df = franchise_df.append({"FranchiseID":"FA", "FranchiseName":"Free Agent"}, ignore_index=True)
+
+    # Get franchise rosters
+    urlString = f"https://www54.myfantasyleague.com/2022/export?TYPE=rosters&L={league_id}"
+    response = requests.get(urlString)
+    soup = BeautifulSoup(response.content,'xml')
+    data = []
+    franchises = soup.find_all('franchise')
+    for i in range(0,len(franchises)):
+        current_franchise = franchises[i].find_all('player')
+        for j in range(0,len(current_franchise)):
+            rows = [franchises[i].get("id"), franchises[i].get("week"), current_franchise[j].get("id"), current_franchise[j].get("status")]
+            data.append(rows)
+    rosters_df = pd.DataFrame(data)
+
+    # Get Free Agents
+    urlString = f"https://www54.myfantasyleague.com/2022/export?TYPE=freeAgents&L={league_id}"
+    response = requests.get(urlString)
+    soup = BeautifulSoup(response.content,'xml')
+    data = []
+    freeAgents = soup.find_all('player')
+    for i in range(len(freeAgents)):
+        rows = ["FA", "", freeAgents[i].get("id"), "Free Agent"]
+        data.append(rows)
+    fa_df = pd.DataFrame(data)
+    rosters_df = rosters_df.append(fa_df)
+    rosters_df.columns=['FranchiseID','Week','PlayerID','RosterStatus']
+
+    # Get all players, sharkRank, and ADP
+    con = psycopg2.connect(DATABASE_URL)
+    cur = con.cursor()
+    query = "SELECT * FROM player_df"
+    player_df = pd.read_sql(query, con)
+
+    # Merge all dfs
+    complete = player_df.merge(rosters_df, on='PlayerID', how='left').merge(franchise_df[['FranchiseID', 'FranchiseName']], on='FranchiseID', how='left')
+    complete['FranchiseID'].fillna("FA", inplace=True)
+    complete['FranchiseName'].fillna("Free Agent", inplace=True)
+    complete['RosterStatus'].fillna("Free Agent", inplace=True)
+    complete['SharkRank'].fillna(3000, inplace=True)
+    complete['ADP'].fillna(3000, inplace=True)
+    complete = complete.sort_values(by=['SharkRank'])
+    complete.reset_index(inplace=True, drop=True)
+
+    qbs_2022 = complete[complete['Position'] == "QB"]
+    qbs_2022.reset_index(inplace=True, drop=True)
+    rbs_2022 = complete[complete['Position'] == "RB"]
+    rbs_2022.reset_index(inplace=True, drop=True)
+    wrs_2022 = complete[complete['Position'] == "WR"]
+    wrs_2022.reset_index(inplace=True, drop=True)
+    tes_2022 = complete[complete['Position'] == "TE"]
+    tes_2022.reset_index(inplace=True, drop=True)
+    pks_2022 = complete[complete['Position'] == "PK"]
+    pks_2022.reset_index(inplace=True, drop=True)
+    defs_2022 = complete[complete['Position'] == "Def"]
+    defs_2022.reset_index(inplace=True, drop=True)
+
+    # Get Relative Values
