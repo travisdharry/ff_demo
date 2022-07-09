@@ -2,6 +2,8 @@
 .DS_Store
 config.py
 .env
+sources/
+db_setup/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
