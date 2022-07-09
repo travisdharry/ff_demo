@@ -12,10 +12,12 @@ from flask_login import (
     login_user,
     logout_user,
 )
+from bs4 import BeautifulSoup
 from oauthlib.oauth2 import WebApplicationClient
 import requests
 import pandas as pd
 import psycopg2
+
 # Internal imports
 from user import User
 
