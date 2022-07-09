@@ -243,6 +243,7 @@ def compareFranchises():
                 cursor.close()
                 connection.close()
                 print("Connection to python_app database has now been closed")
+    point_projections = pd.DataFrame()
     get_point_projections()
 
     return render_template("allPlayers.html", tables=[point_projections.to_html(classes='data')], titles=point_projections.columns.values)
