@@ -244,7 +244,7 @@ def compareFranchises():
                 cursor.close()
                 connection.close()
                 print("Connection to python_app database has now been closed")
-    get_point_projections()
+    point_projections = get_point_projections()
     # conn = psycopg2.connect(DATABASE_URL, sslmode='require')
     # cursor = conn.cursor()
     # query = 'SELECT * FROM point_projections'
