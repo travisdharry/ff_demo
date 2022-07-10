@@ -301,7 +301,7 @@ def compareFranchises():
     fig = px.bar(fran_rost, 
                 x="FranchiseName", 
                 y="Projection_Relative", 
-                color="Position", 
+                color="Position_x", 
                 text='Name', 
                 color_discrete_map={
                     "RB": "#062647", #blue #1033a6 #0c2987 1033a6 062647
