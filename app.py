@@ -17,6 +17,9 @@ from oauthlib.oauth2 import WebApplicationClient
 import requests
 import pandas as pd
 import psycopg2
+import plotly
+import plotly.express as px
+import plotly.graph_objects as go
 
 # Internal imports
 from user import User
