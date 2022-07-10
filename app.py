@@ -228,26 +228,26 @@ def compareFranchises():
     defs_2022.reset_index(inplace=True, drop=True)
 
     # Get Point Projections
-    # def get_point_projections():
-    #     connection = False
-    #     try:
-    #         conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-    #         cursor = conn.cursor()
-    #         query = 'SELECT * FROM point_projections'
-    #         cursor.execute(query)
-    #         point_projections = pd.read_sql(query, conn)
-    #     except (Exception, Error) as error:
-    #         print(error)
-    #     finally:
-    #         if connection:
-    #             cursor.close()
-    #             connection.close()
-    #             print("Connection to python_app database has now been closed")
-    # point_projections = pd.DataFrame()
-    # get_point_projections()
-    conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-    cursor = conn.cursor()
-    query = 'SELECT * FROM point_projections'
-    cursor.execute(query)
-    point_projections = pd.read_sql(query, conn)
+    def get_point_projections():
+        connection = False
+        try:
+            conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+            cursor = conn.cursor()
+            query = 'SELECT * FROM point_projections'
+            cursor.execute(query)
+            point_projections = pd.read_sql(query, conn)
+            return point_projections
+        except (Exception, Error) as error:
+            print(error)
+        finally:
+            if connection:
+                cursor.close()
+                connection.close()
+                print("Connection to python_app database has now been closed")
+    get_point_projections()
+    # conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+    # cursor = conn.cursor()
+    # query = 'SELECT * FROM point_projections'
+    # cursor.execute(query)
+    # point_projections = pd.read_sql(query, conn)
     return render_template("allPlayers.html", tables=[point_projections.to_html(classes='data')], titles=point_projections.columns.values)
