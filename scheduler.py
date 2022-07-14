@@ -6,6 +6,7 @@ import requests
 from datetime import date
 import json
 import os
+import psycopg2
 from sqlalchemy import create_engine
 
 # Find environment variables
@@ -63,5 +64,40 @@ complete.reset_index(inplace=True, drop=True)
 
 # Save to database
 engine = create_engine(DATABASE_URL, echo = False)
-complete.to_sql("player_df", con = engine, if_exists='replace')
+complete.to_sql("player_df", con=engine, if_exists='replace', index=False)
 
+
+# Get any player ages that are not already in the db
+# Pull age_df from database
+con = psycopg2.connect(DATABASE_URL)
+cur = con.cursor()
+query = "SELECT * FROM player_dobs;"
+age_df = pd.read_sql(query, con)
+# Check for any players whose ages are not already in the db
+to_query_age = player_df[~player_df['PlayerID'].isin(age_df['PlayerID'])]
+if len(to_query_age)>0:
+    # Break player list into chunks small enough for the API server
+    n = 50  #chunk row size
+    list_df = [to_query_age.PlayerID[i:i+n] for i in range(0,to_query_age.PlayerID.shape[0],n)]
+
+    for i in range(len(list_df)):
+        idList = ",".join(list_df[i])
+
+        # Get playerProfiles
+        urlString = f"https://api.myfantasyleague.com/2022/export?TYPE=playerProfile&P={idList}"
+        response = requests.get(urlString)
+        soup = BeautifulSoup(response.content,'xml')
+        data = []
+        profiles = soup.find_all('playerProfile')
+        players = soup.find_all('player')
+        for i in range(len(profiles)):
+            rows = [profiles[i].get("id"), players[i].get("dob")]
+            data.append(rows)
+        data_df = pd.DataFrame(data)
+        age = pd.DataFrame(columns=['PlayerID', 'DOB'])
+        age['PlayerID'] = data_df[0]
+        age['DOB'] = data_df[1]
+        age_df = age_df.append(age)
+
+    # Write ages to db
+    age_df.to_sql("player_dobs", con=engine, if_exists='replace', index=False)
