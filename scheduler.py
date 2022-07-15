@@ -8,6 +8,8 @@ import json
 import os
 import psycopg2
 from sqlalchemy import create_engine
+from datetime import datetime, date
+from dateutil.relativedelta import *
 
 # Find environment variables
 DATABASE_URL = os.environ.get("DATABASE_URL", None)
@@ -54,25 +56,12 @@ adp_df = pd.DataFrame(data)
 adp_df.columns=['PlayerID','ADP']
 adp_df['ADP'] = adp_df['ADP'].astype('float32')
 
-# Merge all dfs
-complete = player_df.merge(shark_df, on='PlayerID', how='left').merge(adp_df, on='PlayerID', how='left')
-complete['SharkRank'].fillna(3000, inplace=True)
-complete['ADP'].fillna(3000, inplace=True)
-complete = complete.sort_values(by=['SharkRank'])
-complete.reset_index(inplace=True, drop=True)
-
-
-# Save to database
-engine = create_engine(DATABASE_URL, echo = False)
-complete.to_sql("player_df", con=engine, if_exists='replace', index=False)
-
-
 # Get any player ages that are not already in the db
 # Pull age_df from database
 con = psycopg2.connect(DATABASE_URL)
 cur = con.cursor()
-query = "SELECT * FROM player_dobs;"
-age_df = pd.read_sql(query, con)
+age_query = "SELECT * FROM player_dobs;"
+player_dobs = pd.read_sql(age_query, con)
 # Check for any players whose ages are not already in the db
 to_query_age = player_df[~player_df['PlayerID'].isin(age_df['PlayerID'])]
 if len(to_query_age)>0:
@@ -97,7 +86,26 @@ if len(to_query_age)>0:
         age = pd.DataFrame(columns=['PlayerID', 'DOB'])
         age['PlayerID'] = data_df[0]
         age['DOB'] = data_df[1]
-        age_df = age_df.append(age)
+        player_dobs = player_dobs.append(age)
 
-    # Write ages to db
-    age_df.to_sql("player_dobs", con=engine, if_exists='replace', index=False)
+# Convert string to datetime
+player_dobs['DOB'] = pd.to_datetime(player_dobs['DOB'])
+# Convert DOB to Age
+today = date.today()
+def age(born):
+    return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+player_dobs['Age'] = player_dobs['DOB'].apply(age)
+
+# Merge all dfs
+player_df = player_df.merge(player_dobs, on='PlayerID', how='left')  
+player_df = player_df.merge(shark_df, on='PlayerID', how='left').merge(adp_df, on='PlayerID', how='left')
+player_df['SharkRank'].fillna(3000, inplace=True)
+player_df['ADP'].fillna(3000, inplace=True)
+player_df = player_df.sort_values(by=['SharkRank'])
+player_df.reset_index(inplace=True, drop=True)  
+
+# Write player_df to database
+engine = create_engine(DATABASE_URL, echo = False)
+player_df.to_sql("player_df", con=engine, if_exists='replace', index=False)
+# Write ages to db
+player_dobs.to_sql("player_dobs", con=engine, if_exists='replace', index=False)

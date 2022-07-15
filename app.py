@@ -142,15 +142,13 @@ def logout():
 @app.route("/allPlayers")
 @login_required
 def allPlayers():
+    # Query database for player_df
     con = psycopg2.connect(DATABASE_URL)
     cur = con.cursor()
-    # query 
-    query = "SELECT * FROM player_df"
+    player_query = "SELECT * FROM player_df"
+    player_df = pd.read_sql(player_query, con)
 
-    # return results as a dataframe
-    results = pd.read_sql(query, con)
-
-    return render_template("allPlayers.html", tables=[results.to_html(classes='data')], titles=results.columns.values)
+    return render_template("allPlayers.html", tables=[player_df.to_html(classes='data')], titles=player_df.columns.values)
 
 @app.route('/getLeague')
 @login_required
