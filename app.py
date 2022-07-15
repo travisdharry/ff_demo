@@ -210,93 +210,50 @@ def compareFranchises():
     complete['FranchiseID'].fillna("FA", inplace=True)
     complete['FranchiseName'].fillna("Free Agent", inplace=True)
     complete['RosterStatus'].fillna("Free Agent", inplace=True)
-    complete['SharkRank'].fillna(3000, inplace=True)
-    complete['ADP'].fillna(3000, inplace=True)
     complete = complete.sort_values(by=['SharkRank'])
     complete.reset_index(inplace=True, drop=True)
 
     # Split complete df by player position
-    qbs_2022 = complete[complete['Position'] == "QB"]
-    qbs_2022.reset_index(inplace=True, drop=True)
-    rbs_2022 = complete[complete['Position'] == "RB"]
-    rbs_2022.reset_index(inplace=True, drop=True)
-    wrs_2022 = complete[complete['Position'] == "WR"]
-    wrs_2022.reset_index(inplace=True, drop=True)
-    tes_2022 = complete[complete['Position'] == "TE"]
-    tes_2022.reset_index(inplace=True, drop=True)
-    pks_2022 = complete[complete['Position'] == "PK"]
-    pks_2022.reset_index(inplace=True, drop=True)
-    defs_2022 = complete[complete['Position'] == "Def"]
-    defs_2022.reset_index(inplace=True, drop=True)
+    qbs = complete[complete['Position'] == "QB"]
+    qbs.reset_index(inplace=True, drop=True)
+    rbs = complete[complete['Position'] == "RB"]
+    rbs.reset_index(inplace=True, drop=True)
+    wrs = complete[complete['Position'] == "WR"]
+    wrs.reset_index(inplace=True, drop=True)
+    tes = complete[complete['Position'] == "TE"]
+    tes.reset_index(inplace=True, drop=True)
+    pks = complete[complete['Position'] == "PK"]
+    pks.reset_index(inplace=True, drop=True)
+    defs = complete[complete['Position'] == "Def"]
+    defs.reset_index(inplace=True, drop=True)
 
-    # Get Point Projections
-    def get_point_projections():
-        connection = False
-        try:
-            conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-            cursor = conn.cursor()
-            query = 'SELECT * FROM point_projections'
-            cursor.execute(query)
-            point_projections = pd.read_sql(query, conn)
-            return point_projections
-        except (Exception, Error) as error:
-            print(error)
-        finally:
-            if connection:
-                cursor.close()
-                connection.close()
-                print("Connection to python_app database has now been closed")
-    point_projections = get_point_projections()
+    # Roster Builder logic
+    qbs_top = qbs.sort_values(by='Projection_Relative', ascending=False, ignore_index=True).groupby('FranchiseName').head(1)
+    rbs_top = rbs.sort_values(by='Projection_Relative', ascending=False, ignore_index=True).groupby('FranchiseName').head(2)
+    wrs_top = wrs.sort_values(by='Projection_Relative', ascending=False, ignore_index=True).groupby('FranchiseName').head(3)
+    tes_top = tes.sort_values(by='Projection_Relative', ascending=False, ignore_index=True).groupby('FranchiseName').head(2)
 
-    # Split point_projection df by player position
-    qb_proj = point_projections[point_projections['Position'] == "QB"]
-    qb_proj.reset_index(inplace=True, drop=True)
-    rb_proj = point_projections[point_projections['Position'] == "RB"]
-    rb_proj.reset_index(inplace=True, drop=True)
-    wr_proj = point_projections[point_projections['Position'] == "WR"]
-    wr_proj.reset_index(inplace=True, drop=True)
-    te_proj = point_projections[point_projections['Position'] == "TE"]
-    te_proj.reset_index(inplace=True, drop=True)
-    pk_proj = point_projections[point_projections['Position'] == "PK"]
-    pk_proj.reset_index(inplace=True, drop=True)
-    def_proj = point_projections[point_projections['Position'] == "Def"]
-    def_proj.reset_index(inplace=True, drop=True)
-
-    # Join dfs for current year to point_projection dfs
-    # Merge dfs
-    qbs_2022 = pd.merge(qbs_2022, qb_proj, how="left", left_index=True, right_index=True)
-    rbs_2022 = pd.merge(rbs_2022, rb_proj, how="left", left_index=True, right_index=True)
-    wrs_2022 = pd.merge(wrs_2022, wr_proj, how="left", left_index=True, right_index=True)
-    tes_2022 = pd.merge(tes_2022, te_proj, how="left", left_index=True, right_index=True)
-    pks_2022 = pd.merge(pks_2022, pk_proj, how="left", left_index=True, right_index=True)
-    defs_2022 = pd.merge(defs_2022, def_proj, how="left", left_index=True, right_index=True)
-
-    qbs_top = qbs_2022.sort_values(by='Projection_Relative', ascending=False, ignore_index=True).groupby('FranchiseName').head(1)
-    rbs_top = rbs_2022.sort_values(by='Projection_Relative', ascending=False, ignore_index=True).groupby('FranchiseName').head(2)
-    wrs_top = wrs_2022.sort_values(by='Projection_Relative', ascending=False, ignore_index=True).groupby('FranchiseName').head(3)
-    tes_top = tes_2022.sort_values(by='Projection_Relative', ascending=False, ignore_index=True).groupby('FranchiseName').head(2)
-
-    qbs_remainder = qbs_2022[~qbs_2022['PlayerID'].isin(qbs_top['PlayerID'])].groupby('FranchiseName').head(1)
-    rbs_remainder = rbs_2022[~rbs_2022['PlayerID'].isin(rbs_top['PlayerID'])].groupby('FranchiseName').head(3)
-    wrs_remainder = wrs_2022[~wrs_2022['PlayerID'].isin(wrs_top['PlayerID'])].groupby('FranchiseName').head(3)
-    tes_remainder = tes_2022[~tes_2022['PlayerID'].isin(tes_top['PlayerID'])].groupby('FranchiseName').head(3)
+    qbs_remainder = qbs[~qbs['PlayerID'].isin(qbs_top['PlayerID'])].groupby('FranchiseName').head(1)
+    rbs_remainder = rbs[~rbs['PlayerID'].isin(rbs_top['PlayerID'])].groupby('FranchiseName').head(3)
+    wrs_remainder = wrs[~wrs['PlayerID'].isin(wrs_top['PlayerID'])].groupby('FranchiseName').head(3)
+    tes_remainder = tes[~tes['PlayerID'].isin(tes_top['PlayerID'])].groupby('FranchiseName').head(3)
 
     remainder = pd.concat([qbs_remainder, rbs_remainder, wrs_remainder, tes_remainder])
 
     top_remainders = remainder.sort_values(by='Projection_Absolute', ascending=False, ignore_index=True).groupby('FranchiseName').head(3)
 
-    fran_rost = pd.concat([qbs_top, rbs_top, wrs_top, tes_top, top_remainders])
-    fran_rost = fran_rost.sort_values(by='Projection_Absolute', ascending=False, ignore_index=True)
+    players_onthefield = pd.concat([qbs_top, rbs_top, wrs_top, tes_top, top_remainders])
+    players_onthefield = players_onthefield.sort_values(by='Projection_Absolute', ascending=False, ignore_index=True)
 
-    fran_rank = fran_rost.groupby('FranchiseName').sum().sort_values(by='Projection_Absolute', ascending=False)
+    fran_rank = players_onthefield.groupby('FranchiseName').sum().sort_values(by='Projection_Absolute', ascending=False)
 
     sorter = fran_rank.index
 
-    fran_rost.FranchiseName = fran_rost.FranchiseName.astype("category")
-    fran_rost.FranchiseName.cat.set_categories(sorter, inplace=True)
-    fran_rost.sort_values(["FranchiseName"], inplace=True)
+    players_onthefield.FranchiseName = players_onthefield.FranchiseName.astype("category")
+    players_onthefield.FranchiseName.cat.set_categories(sorter, inplace=True)
+    players_onthefield.sort_values(["FranchiseName"], inplace=True)
 
-    fig = px.bar(fran_rost, 
+    fig = px.bar(players_onthefield, 
                 x="FranchiseName", 
                 y="Projection_Relative", 
                 color="Position_x", 
@@ -313,4 +270,3 @@ def compareFranchises():
 
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
     return render_template('compareFranchises.html', graphJSON=graphJSON)
-#    return render_template("allPlayers.html", tables=[point_projections.to_html(classes='data')])

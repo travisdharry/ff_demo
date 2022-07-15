@@ -97,12 +97,72 @@ def age(born):
 player_dobs['Age'] = player_dobs['DOB'].apply(age)
 
 # Merge all dfs
-player_df = player_df.merge(player_dobs, on='PlayerID', how='left')  
+player_df = player_df.merge(player_dobs, on='PlayerID', how='left')
+player_df = player_df.drop(columns='DOB')
 player_df = player_df.merge(shark_df, on='PlayerID', how='left').merge(adp_df, on='PlayerID', how='left')
 player_df['SharkRank'].fillna(3000, inplace=True)
 player_df['ADP'].fillna(3000, inplace=True)
 player_df = player_df.sort_values(by=['SharkRank'])
 player_df.reset_index(inplace=True, drop=True)  
+
+# Split player df by player position
+qbs = player_df[player_df['Position'] == "QB"]
+qbs.reset_index(inplace=True, drop=True)
+rbs = player_df[player_df['Position'] == "RB"]
+rbs.reset_index(inplace=True, drop=True)
+wrs = player_df[player_df['Position'] == "WR"]
+wrs.reset_index(inplace=True, drop=True)
+tes = player_df[player_df['Position'] == "TE"]
+tes.reset_index(inplace=True, drop=True)
+pks = player_df[player_df['Position'] == "PK"]
+pks.reset_index(inplace=True, drop=True)
+defs = player_df[player_df['Position'] == "Def"]
+defs.reset_index(inplace=True, drop=True)
+
+# Get Point Projections
+def get_point_projections():
+    connection = False
+    try:
+        conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+        cursor = conn.cursor()
+        query = 'SELECT * FROM point_projections'
+        cursor.execute(query)
+        point_projections = pd.read_sql(query, conn)
+        return point_projections
+    except (Exception, Error) as error:
+        print(error)
+    finally:
+        if connection:
+            cursor.close()
+            connection.close()
+            print("Connection to python_app database has now been closed")
+point_projections = get_point_projections()
+
+# Split point_projection df by player position
+qb_proj = point_projections[point_projections['Position'] == "QB"]
+qb_proj.reset_index(inplace=True, drop=True)
+rb_proj = point_projections[point_projections['Position'] == "RB"]
+rb_proj.reset_index(inplace=True, drop=True)
+wr_proj = point_projections[point_projections['Position'] == "WR"]
+wr_proj.reset_index(inplace=True, drop=True)
+te_proj = point_projections[point_projections['Position'] == "TE"]
+te_proj.reset_index(inplace=True, drop=True)
+pk_proj = point_projections[point_projections['Position'] == "PK"]
+pk_proj.reset_index(inplace=True, drop=True)
+def_proj = point_projections[point_projections['Position'] == "Def"]
+def_proj.reset_index(inplace=True, drop=True)
+
+# Join dfs for current year to point_projection dfs
+# Merge dfs
+qbs = pd.merge(qbs, qb_proj, how="left", left_index=True, right_index=True)
+rbs = pd.merge(rbs, rb_proj, how="left", left_index=True, right_index=True)
+wrs = pd.merge(wrs, wr_proj, how="left", left_index=True, right_index=True)
+tes = pd.merge(tes, te_proj, how="left", left_index=True, right_index=True)
+pks = pd.merge(pks, pk_proj, how="left", left_index=True, right_index=True)
+defs = pd.merge(defs, def_proj, how="left", left_index=True, right_index=True)
+
+player_df = pd.concat([qbs, rbs, wrs, tes, pks, defs])
+player_df = player_df.sort_values(by=['Projection_Relative'])
 
 # Write player_df to database
 engine = create_engine(DATABASE_URL, echo = False)
