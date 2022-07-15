@@ -129,8 +129,8 @@ def callback():
     else: 
         # Begin user session by logging the user in
         login_user(user)
-        # Send user on to success page
-        return redirect(url_for("success"))
+        # Send user back to index page
+        return redirect(url_for("index"))
 
 @app.route("/logout")
 @login_required
