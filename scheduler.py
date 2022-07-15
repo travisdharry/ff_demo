@@ -150,7 +150,7 @@ defs.reset_index(inplace=True, drop=True)
 #             cursor.close()
 #             connection.close()
 #             print("Connection to python_app database has now been closed")
-point_projections = get_df(point_projections)
+point_projections = get_df("point_projections")
 
 # Split point_projection df by player position
 qb_proj = point_projections[point_projections['Position'] == "QB"]

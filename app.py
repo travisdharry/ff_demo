@@ -23,6 +23,7 @@ import plotly.graph_objects as go
 
 # Internal imports
 from user import User
+from db import get_df
 
 # Configuration (These variables are stored as environment variables)
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", None)
@@ -143,10 +144,11 @@ def logout():
 @login_required
 def allPlayers():
     # Query database for player_df
-    con = psycopg2.connect(DATABASE_URL)
-    cur = con.cursor()
-    player_query = "SELECT * FROM player_df"
-    player_df = pd.read_sql(player_query, con)
+    # con = psycopg2.connect(DATABASE_URL)
+    # cur = con.cursor()
+    # player_query = "SELECT * FROM player_df"
+    # player_df = pd.read_sql(player_query, con)
+    player_df = get_df("player_df")
 
     return render_template("allPlayers.html", tables=[player_df.to_html(classes='data')], titles=player_df.columns.values)
 
@@ -200,10 +202,11 @@ def compareFranchises():
     rosters_df.columns=['FranchiseID','Week','PlayerID','RosterStatus']
 
     # Get all players, sharkRank, and ADP
-    con = psycopg2.connect(DATABASE_URL)
-    cur = con.cursor()
-    query = "SELECT * FROM player_df"
-    player_df = pd.read_sql(query, con)
+    # con = psycopg2.connect(DATABASE_URL)
+    # cur = con.cursor()
+    # query = "SELECT * FROM player_df"
+    # player_df = pd.read_sql(query, con)
+    player_df = get_df("player_df")
 
     # Merge all dfs
     complete = player_df.merge(rosters_df, on='PlayerID', how='left').merge(franchise_df[['FranchiseID', 'FranchiseName']], on='FranchiseID', how='left')
