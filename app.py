@@ -263,7 +263,8 @@ def compareFranchises():
 #@login_required
 def getFranchise():
     user_league = request.form["user_league"]
-    current_user = current_user.change_user_league(user_league)
+    #current_user = current_user.change_user_league(user_league)
+    current_user.user_league = user_league
     return render_template("getFranchise.html", new_league=current_user.user_league)
 
 @app.route('/landing', methods=['GET', 'POST'])
