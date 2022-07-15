@@ -1,12 +1,20 @@
 # Import dependencies
-from flask import Flask, render_template, request
+# Import dependencies
 import pandas as pd
 from bs4 import BeautifulSoup
 import requests
 from datetime import date
 import json
 import os
+
 import psycopg2
+# import sys to get more detailed Python exception info
+import sys
+# import the connect library for psycopg2
+from psycopg2 import connect
+# import the error handling libraries for psycopg2
+from psycopg2 import OperationalError, errorcodes, errors
+
 from sqlalchemy import create_engine
 from datetime import datetime, date
 from dateutil.relativedelta import *
@@ -57,11 +65,28 @@ adp_df.columns=['PlayerID','ADP']
 adp_df['ADP'] = adp_df['ADP'].astype('float32')
 
 # Get any player ages that are not already in the db
-# Pull player_dobs from database
-con = psycopg2.connect(DATABASE_URL)
-cur = con.cursor()
-age_query = "SELECT * FROM player_dobs;"
-player_dobs = pd.read_sql(age_query, con)
+# # Pull player_dobs from database
+# con = psycopg2.connect(DATABASE_URL)
+# cur = con.cursor()
+# age_query = "SELECT * FROM player_dobs;"
+# player_dobs = pd.read_sql(age_query, con)
+def get_player_dobs():
+    connection = False
+    try:
+        conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+        cursor = conn.cursor()
+        query = 'SELECT * FROM player_dobs'
+        cursor.execute(query)
+        player_dobs = pd.read_sql(query, conn)
+        return player_dobs
+    except (Exception, Error) as error:
+        print(error)
+    finally:
+        if connection:
+            cursor.close()
+            connection.close()
+            print("Connection to python_app database has now been closed")
+player_dobs = get_player_dobs()
 # Check for any players whose ages are not already in the db
 to_query_age = player_df[~player_df['PlayerID'].isin(player_dobs['PlayerID'])]
 if len(to_query_age)>0:
@@ -154,15 +179,15 @@ def_proj.reset_index(inplace=True, drop=True)
 
 # Join dfs for current year to point_projection dfs
 # Merge dfs
-qbs = pd.merge(qbs, qb_proj, how="left", left_index=True, right_index=True)
-rbs = pd.merge(rbs, rb_proj, how="left", left_index=True, right_index=True)
-wrs = pd.merge(wrs, wr_proj, how="left", left_index=True, right_index=True)
-tes = pd.merge(tes, te_proj, how="left", left_index=True, right_index=True)
-pks = pd.merge(pks, pk_proj, how="left", left_index=True, right_index=True)
-defs = pd.merge(defs, def_proj, how="left", left_index=True, right_index=True)
+qbs = pd.merge(qbs, qb_proj[['Projection_Relative', 'Projection_Absolute']], how="left", left_index=True, right_index=True)
+rbs = pd.merge(rbs, rb_proj[['Projection_Relative', 'Projection_Absolute']], how="left", left_index=True, right_index=True)
+wrs = pd.merge(wrs, wr_proj[['Projection_Relative', 'Projection_Absolute']], how="left", left_index=True, right_index=True)
+tes = pd.merge(tes, te_proj[['Projection_Relative', 'Projection_Absolute']], how="left", left_index=True, right_index=True)
+pks = pd.merge(pks, pk_proj[['Projection_Relative', 'Projection_Absolute']], how="left", left_index=True, right_index=True)
+defs = pd.merge(defs, def_proj[['Projection_Relative', 'Projection_Absolute']], how="left", left_index=True, right_index=True)
 
 player_df = pd.concat([qbs, rbs, wrs, tes, pks, defs])
-player_df = player_df.sort_values(by=['Projection_Relative'])
+player_df = player_df.sort_values(by=['Projection_Relative'], ascending=False)
 
 # Write player_df to database
 engine = create_engine(DATABASE_URL, echo = False)

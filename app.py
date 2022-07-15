@@ -58,15 +58,15 @@ def load_user(user_id):
 @app.route('/')
 def index():
     if current_user.is_authenticated:
-        return (
-            "<p>Hello, {}! You are already logged in!</p>"
-            "<a class='button' href='/allPlayers'>See All Players</a>"
-            "<a class='button' href='/getLeague'>Compare Franchises</a>".format(
-                current_user.id
-            )
-        )
+        return render_template("landing.html", user_id=current_user.id)
+        #     "<p>Hello, {}! You are already logged in!</p><br>"
+        #     "<a class='button' href='/allPlayers'>See All Players</a><br>"
+        #     "<a class='button' href='/getLeague'>Compare Franchises</a>".format(
+        #        current_user.id
+        #    )
+        # )
     else:
-        return '<a class="button" href="/login">Google Login</a>'
+        return render_template("index.html")
 
 # If user is not already logged in they are redirected here
 @app.route("/login")
@@ -253,6 +253,7 @@ def compareFranchises():
     players_onthefield.FranchiseName.cat.set_categories(sorter, inplace=True)
     players_onthefield.sort_values(["FranchiseName"], inplace=True)
 
+    # Create bar chart
     fig = px.bar(players_onthefield, 
                 x="FranchiseName", 
                 y="Projection_Relative", 
