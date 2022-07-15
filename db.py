@@ -1,4 +1,8 @@
+# Import dependencies
+import os
+import pandas as pd
 import psycopg2
+from psycopg2 import OperationalError, errorcodes, errors
 
 # Find environment variables
 DATABASE_URL = os.environ.get("DATABASE_URL", None)

@@ -1,23 +1,17 @@
 # Import dependencies
-# Import dependencies
+import json
+import os
+from datetime import datetime, date
+from dateutil.relativedelta import *
 import pandas as pd
 from bs4 import BeautifulSoup
 import requests
-from datetime import date
-import json
-import os
-
 import psycopg2
-# import sys to get more detailed Python exception info
-import sys
-# import the connect library for psycopg2
-from psycopg2 import connect
-# import the error handling libraries for psycopg2
 from psycopg2 import OperationalError, errorcodes, errors
-
 from sqlalchemy import create_engine
-from datetime import datetime, date
-from dateutil.relativedelta import *
+
+# Internal imports
+from db import get_df
 
 # Find environment variables
 DATABASE_URL = os.environ.get("DATABASE_URL", None)
@@ -64,29 +58,24 @@ adp_df = pd.DataFrame(data)
 adp_df.columns=['PlayerID','ADP']
 adp_df['ADP'] = adp_df['ADP'].astype('float32')
 
-# Get any player ages that are not already in the db
-# # Pull player_dobs from database
-# con = psycopg2.connect(DATABASE_URL)
-# cur = con.cursor()
-# age_query = "SELECT * FROM player_dobs;"
-# player_dobs = pd.read_sql(age_query, con)
-def get_player_dobs():
-    connection = False
-    try:
-        conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-        cursor = conn.cursor()
-        query = 'SELECT * FROM player_dobs'
-        cursor.execute(query)
-        player_dobs = pd.read_sql(query, conn)
-        return player_dobs
-    except (Exception, Error) as error:
-        print(error)
-    finally:
-        if connection:
-            cursor.close()
-            connection.close()
-            print("Connection to python_app database has now been closed")
-player_dobs = get_player_dobs()
+# Get any player dobs who are already in the db
+# def get_player_dobs():
+#     connection = False
+#     try:
+#         conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+#         cursor = conn.cursor()
+#         query = 'SELECT * FROM player_dobs'
+#         cursor.execute(query)
+#         player_dobs = pd.read_sql(query, conn)
+#         return player_dobs
+#     except (Exception, Error) as error:
+#         print(error)
+#     finally:
+#         if connection:
+#             cursor.close()
+#             connection.close()
+#             print("Connection to python_app database has now been closed")
+player_dobs = get_df('player_dobs')
 # Check for any players whose ages are not already in the db
 to_query_age = player_df[~player_df['PlayerID'].isin(player_dobs['PlayerID'])]
 if len(to_query_age)>0:
@@ -145,23 +134,23 @@ defs = player_df[player_df['Position'] == "Def"]
 defs.reset_index(inplace=True, drop=True)
 
 # Get Point Projections
-def get_point_projections():
-    connection = False
-    try:
-        conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-        cursor = conn.cursor()
-        query = 'SELECT * FROM point_projections'
-        cursor.execute(query)
-        point_projections = pd.read_sql(query, conn)
-        return point_projections
-    except (Exception, Error) as error:
-        print(error)
-    finally:
-        if connection:
-            cursor.close()
-            connection.close()
-            print("Connection to python_app database has now been closed")
-point_projections = get_point_projections()
+# def get_point_projections():
+#     connection = False
+#     try:
+#         conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+#         cursor = conn.cursor()
+#         query = 'SELECT * FROM point_projections'
+#         cursor.execute(query)
+#         point_projections = pd.read_sql(query, conn)
+#         return point_projections
+#     except (Exception, Error) as error:
+#         print(error)
+#     finally:
+#         if connection:
+#             cursor.close()
+#             connection.close()
+#             print("Connection to python_app database has now been closed")
+point_projections = get_df(point_projections)
 
 # Split point_projection df by player position
 qb_proj = point_projections[point_projections['Position'] == "QB"]
