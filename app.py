@@ -59,13 +59,7 @@ def load_user(user_id):
 @app.route('/')
 def index():
     if current_user.is_authenticated:
-        return render_template("landing.html", user_id=current_user.id)
-        #     "<p>Hello, {}! You are already logged in!</p><br>"
-        #     "<a class='button' href='/allPlayers'>See All Players</a><br>"
-        #     "<a class='button' href='/getLeague'>Compare Franchises</a>".format(
-        #        current_user.id
-        #    )
-        # )
+        return render_template("getLeague.html", user_id=current_user.id)
     else:
         return render_template("index.html")
 
@@ -126,7 +120,7 @@ def callback():
 
     if not User.get(users_email):
         # Send user to failure page
-        return redirect(url_for("failure"))
+        return '<p>"Login failure"</p>'
     else: 
         # Begin user session by logging the user in
         login_user(user)
@@ -134,36 +128,30 @@ def callback():
         return redirect(url_for("index"))
 
 @app.route("/logout")
-@login_required
+#@login_required
 def logout():
     logout_user()
     return '<p>You have been logged out! </p><a class="button" href="/">Return to App Homepage</a>' 
 
 
 @app.route("/allPlayers")
-@login_required
+#@login_required
 def allPlayers():
-    # Query database for player_df
-    # con = psycopg2.connect(DATABASE_URL)
-    # cur = con.cursor()
-    # player_query = "SELECT * FROM player_df"
-    # player_df = pd.read_sql(player_query, con)
     player_df = get_df("player_df")
-
     return render_template("allPlayers.html", tables=[player_df.to_html(classes='data')], titles=player_df.columns.values)
 
 @app.route('/getLeague')
-@login_required
+#@login_required
 def getLeague():
     return render_template("getLeague.html")
 
 @app.route('/compareFranchises')
-@login_required
+#@login_required
 def compareFranchises():
-    league_id = request.args.get("leagueID")
+    user_league = request.args.get("user_league")
 
     # Get Franchises in the league
-    urlString = f"https://www54.myfantasyleague.com/2022/export?TYPE=league&L={league_id}"
+    urlString = f"https://www54.myfantasyleague.com/2022/export?TYPE=league&L={user_league}"
     response = requests.get(urlString)
     soup = BeautifulSoup(response.content,'xml')
     data = []
@@ -176,7 +164,7 @@ def compareFranchises():
     franchise_df = franchise_df.append({"FranchiseID":"FA", "FranchiseName":"Free Agent"}, ignore_index=True)
 
     # Get franchise rosters
-    urlString = f"https://www54.myfantasyleague.com/2022/export?TYPE=rosters&L={league_id}"
+    urlString = f"https://www54.myfantasyleague.com/2022/export?TYPE=rosters&L={user_league}"
     response = requests.get(urlString)
     soup = BeautifulSoup(response.content,'xml')
     data = []
@@ -189,7 +177,7 @@ def compareFranchises():
     rosters_df = pd.DataFrame(data)
 
     # Get Free Agents
-    urlString = f"https://www54.myfantasyleague.com/2022/export?TYPE=freeAgents&L={league_id}"
+    urlString = f"https://www54.myfantasyleague.com/2022/export?TYPE=freeAgents&L={user_league}"
     response = requests.get(urlString)
     soup = BeautifulSoup(response.content,'xml')
     data = []
@@ -202,10 +190,6 @@ def compareFranchises():
     rosters_df.columns=['FranchiseID','Week','PlayerID','RosterStatus']
 
     # Get all players, sharkRank, and ADP
-    # con = psycopg2.connect(DATABASE_URL)
-    # cur = con.cursor()
-    # query = "SELECT * FROM player_df"
-    # player_df = pd.read_sql(query, con)
     player_df = get_df("player_df")
 
     # Merge all dfs
@@ -274,3 +258,23 @@ def compareFranchises():
 
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
     return render_template('compareFranchises.html', graphJSON=graphJSON)
+
+@app.route('/getFranchise', methods=['GET', 'POST'])
+#@login_required
+def getFranchise():
+    user_league = request.form["user_league"]
+    User.change_user_league(current_user, user_league)
+    return render_template("getFranchise.html", new_league=current_user.user_league)
+
+@app.route('/landing', methods=['GET', 'POST'])
+#@login_required
+def landing():
+    user_franchise = request.form["FranchiseName"]
+    return render_template("landing.html", user_franchise=user_franchise, new_league=current_user.user_league)
+
+@app.route('/waiverWire', methods=['GET', 'POST'])
+#@login_required
+def waiverWire():
+    #user_league = request.args.get("leagueID")
+    user_franchise = request.form["FranchiseName"]
+    return render_template("waiverWire.html", user_franchise=user_franchise)
