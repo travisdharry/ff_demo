@@ -57,13 +57,13 @@ adp_df.columns=['PlayerID','ADP']
 adp_df['ADP'] = adp_df['ADP'].astype('float32')
 
 # Get any player ages that are not already in the db
-# Pull age_df from database
+# Pull player_dobs from database
 con = psycopg2.connect(DATABASE_URL)
 cur = con.cursor()
 age_query = "SELECT * FROM player_dobs;"
 player_dobs = pd.read_sql(age_query, con)
 # Check for any players whose ages are not already in the db
-to_query_age = player_df[~player_df['PlayerID'].isin(age_df['PlayerID'])]
+to_query_age = player_df[~player_df['PlayerID'].isin(player_dobs['PlayerID'])]
 if len(to_query_age)>0:
     # Break player list into chunks small enough for the API server
     n = 50  #chunk row size
