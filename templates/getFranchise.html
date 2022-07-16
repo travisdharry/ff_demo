@@ -7,9 +7,9 @@
     <title>Input Franchise</title>
 </head>
 <body>
-    <form name="FranchiseName" action="/landing" method="post">
+    <form name="franchiseName" action="/landing" method="post">
         <label for="franchises">Choose your franchise:</label>
-            <select name="franchiseName" id="franchises">
+            <select name="FranchiseName" id="franchises">
                 {% for franchiseName in franchise_list %}
                     <option value="{{ franchiseName }}" SELECTED>{{ franchiseName }}</option>
                 {% endfor %}     
