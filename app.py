@@ -142,13 +142,15 @@ def getFranchise():
     urlString = f"https://www54.myfantasyleague.com/2022/export?TYPE=league&L={user_league}"
     response = requests.get(urlString)
     soup = BeautifulSoup(response.content,'xml')
-    franchise_list = []
+    data = []
     franchises = soup.find_all('franchise')
     for i in range(len(franchises)):
-        franchise_name = franchises[i].get("name")
-        franchise_list.append(franchise_name)
+        rows = [franchises[i].get("id"), franchises[i].get("name")]
+        data.append(rows)
+    franchise_df = pd.DataFrame(data)
+    franchise_df.columns=['FranchiseID','FranchiseName']
 
-    return render_template("getFranchise.html", franchise_list=franchise_list)
+    return render_template("getFranchise.html", franchise_list=[franchise_df.to_html(classes='data')])
 
 @app.route('/landing', methods=['POST'])
 #@login_required
@@ -284,10 +286,16 @@ def waiverWire():
     user_league = session.get('user_league', None)
     user_franchise = session.get('user_franchise', None)
 
-    return render_template("waiverWire.html")
+    player_df = get_df("player_df")
+
+    return render_template("waiverWire.html", tables=[player_df.to_html(classes='data')], titles=player_df.columns.values)
+
+
+
+
 
 @app.route("/logout")
 #@login_required
 def logout():
     logout_user()
-    return '<p>You have been logged out! </p><a class="button" href="/">Return to App Homepage</a>' 
+    return render_template("logout.html")
