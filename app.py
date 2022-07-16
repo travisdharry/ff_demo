@@ -264,14 +264,15 @@ def compareFranchises():
 def getFranchise():
     user_league = request.form["user_league"]
     #current_user = current_user.change_user_league(user_league)
-    current_user.user_league = user_league
-    return render_template("getFranchise.html", new_league=current_user.user_league)
+    #current_user.user_league = user_league
+    session['user_league'] = user_league
+    return render_template("getFranchise.html", new_league=session.get('my_var', None))
 
 @app.route('/landing', methods=['GET', 'POST'])
 #@login_required
 def landing():
     user_franchise = request.form["FranchiseName"]
-    return render_template("landing.html", user_franchise=user_franchise, new_league=current_user.user_league)
+    return render_template("landing.html", user_franchise=current_user.user_league, new_league=session.get('my_var', None))
 
 @app.route('/waiverWire', methods=['GET', 'POST'])
 #@login_required
