@@ -146,7 +146,7 @@ def getFranchise():
     franchises = soup.find_all('franchise')
     for i in range(len(franchises)):
         franchise_name = franchises[i].get("name")
-        data.append(franchise_name)
+        franchise_list.append(franchise_name)
 
     return render_template("getFranchise.html", franchise_list=franchise_list)
 
