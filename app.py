@@ -3,7 +3,7 @@
 import json
 import os
 # Third-party libraries
-from flask import Flask, redirect, request, url_for, render_template
+from flask import Flask, redirect, request, url_for, render_template, session
 from flask_login import (
     UserMixin,
     LoginManager,
@@ -266,13 +266,15 @@ def getFranchise():
     #current_user = current_user.change_user_league(user_league)
     #current_user.user_league = user_league
     session['user_league'] = user_league
-    return render_template("getFranchise.html", new_league=session.get('my_var', None))
+    new_league = session.get('my_var', None)
+    return render_template("getFranchise.html", new_league=new_league)
 
 @app.route('/landing', methods=['GET', 'POST'])
 #@login_required
 def landing():
     user_franchise = request.form["FranchiseName"]
-    return render_template("landing.html", user_franchise=current_user.user_league, new_league=session.get('my_var', None))
+    new_league = session.get('my_var', None)
+    return render_template("landing.html", user_franchise=user_franchise, new_league=new_league)
 
 @app.route('/waiverWire', methods=['GET', 'POST'])
 #@login_required
