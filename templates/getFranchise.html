@@ -7,7 +7,18 @@
     <title>Input Franchise</title>
 </head>
 <body>
-    <p>Current User League: {{new_league}}</p>
+    <form name="FranchiseName" action="/landing" method="post">
+        <label for="franchises">Choose your franchise:</label>
+            <select name="franchiseName" id="franchises">
+                {% for franchiseName in franchise_list %}
+                    <option value="{{ franchiseName }}" SELECTED>{{ franchiseName }}</option>
+                {% endfor %}     
+            </select>
+    <br><br>
+    <input type="submit" value="Submit">
+    </form>
+
+
     <form action="/landing" method="post">
         <input autocomplete="off" autofocus name="FranchiseName" placeholder="Input your Franchise Name" type="text">
         <input type="submit">

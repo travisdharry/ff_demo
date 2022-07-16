@@ -137,7 +137,18 @@ def getLeague():
 def getFranchise():
     user_league = request.form["user_league"]
     session['user_league'] = user_league
-    return render_template("getFranchise.html")
+
+    # Get Franchises in the league
+    urlString = f"https://www54.myfantasyleague.com/2022/export?TYPE=league&L={user_league}"
+    response = requests.get(urlString)
+    soup = BeautifulSoup(response.content,'xml')
+    franchise_list = []
+    franchises = soup.find_all('franchise')
+    for i in range(len(franchises)):
+        franchise_name = franchises[i].get("name")
+        data.append(franchise_name)
+
+    return render_template("getFranchise.html", franchise_list=franchise_list)
 
 @app.route('/landing', methods=['POST'])
 #@login_required
