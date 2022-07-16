@@ -127,12 +127,25 @@ def callback():
         # Send user back to index page
         return redirect(url_for("index"))
 
-@app.route("/logout")
+@app.route('/getLeague')
 #@login_required
-def logout():
-    logout_user()
-    return '<p>You have been logged out! </p><a class="button" href="/">Return to App Homepage</a>' 
+def getLeague():
+    return render_template("getLeague.html")
 
+@app.route('/getFranchise', methods=['GET', 'POST'])
+#@login_required
+def getFranchise():
+    user_league = request.form["user_league"]
+    session['user_league'] = user_league
+    return render_template("getFranchise.html")
+
+@app.route('/landing', methods=['POST'])
+#@login_required
+def landing():
+    user_franchise = request.form["FranchiseName"]
+    session['user_franchise'] = user_franchise
+    user_league = session.get('user_league', None)
+    return render_template("landing.html")
 
 @app.route("/allPlayers")
 #@login_required
@@ -140,15 +153,10 @@ def allPlayers():
     player_df = get_df("player_df")
     return render_template("allPlayers.html", tables=[player_df.to_html(classes='data')], titles=player_df.columns.values)
 
-@app.route('/getLeague')
-#@login_required
-def getLeague():
-    return render_template("getLeague.html")
-
 @app.route('/compareFranchises')
 #@login_required
 def compareFranchises():
-    user_league = request.args.get("user_league")
+    user_league = session.get("user_league")
 
     # Get Franchises in the league
     urlString = f"https://www54.myfantasyleague.com/2022/export?TYPE=league&L={user_league}"
@@ -259,26 +267,16 @@ def compareFranchises():
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
     return render_template('compareFranchises.html', graphJSON=graphJSON)
 
-@app.route('/getFranchise', methods=['GET', 'POST'])
-#@login_required
-def getFranchise():
-    user_league = request.form["user_league"]
-    #current_user = current_user.change_user_league(user_league)
-    #current_user.user_league = user_league
-    session['user_league'] = user_league
-    new_league = session.get('user_league', None)
-    return render_template("getFranchise.html", new_league=new_league)
-
-@app.route('/landing', methods=['GET', 'POST'])
-#@login_required
-def landing():
-    user_franchise = request.form["FranchiseName"]
-    new_league = session.get('user_league', None)
-    return render_template("landing.html", user_franchise=user_franchise, new_league=new_league)
-
 @app.route('/waiverWire', methods=['GET', 'POST'])
 #@login_required
 def waiverWire():
-    #user_league = request.args.get("leagueID")
-    user_franchise = request.form["FranchiseName"]
-    return render_template("waiverWire.html", user_franchise=user_franchise)
+    user_league = session.get('user_league', None)
+    user_franchise = session.get('user_franchise', None)
+
+    return render_template("waiverWire.html")
+
+@app.route("/logout")
+#@login_required
+def logout():
+    logout_user()
+    return '<p>You have been logged out! </p><a class="button" href="/">Return to App Homepage</a>' 
