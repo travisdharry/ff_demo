@@ -153,10 +153,10 @@ def getFranchise():
 @app.route('/landing', methods=['POST'])
 #@login_required
 def landing():
-    user_franchise = request.form["FranchiseName"]
+    user_franchise = request.form["FranchiseID"]
     session['user_franchise'] = user_franchise
     user_league = session.get('user_league', None)
-    return render_template("landing.html")
+    return render_template("landing.html", user_franchise=user_franchise, user_league=user_league)
 
 @app.route("/allPlayers")
 #@login_required
