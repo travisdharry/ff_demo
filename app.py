@@ -147,10 +147,8 @@ def getFranchise():
     for i in range(len(franchises)):
         rows = [franchises[i].get("id"), franchises[i].get("name")]
         data.append(rows)
-    franchise_df = pd.DataFrame(data)
-    franchise_df.columns=['FranchiseID','FranchiseName']
 
-    return render_template("getFranchise.html", franchise_list=franchise_df.to_dict(orient='records'))
+    return render_template("getFranchise.html", franchise_list=data)
 
 @app.route('/landing', methods=['POST'])
 #@login_required
