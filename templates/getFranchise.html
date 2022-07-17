@@ -10,8 +10,10 @@
     <form action="/landing" method="post">
         <label for="franchises">Choose your franchise:</label>
             <select name="FranchiseName" id="franchises">
-                {% for [franchiseID, franchiseName] in franchise_list %}
-                    <option value="{{ franchiseID }}" SELECTED>{{ franchiseName }}</option>
+                {% for row in franchise_list %}
+                    {% for franchiseID, franchiseName in row.items() %}
+                        <option value="{{ franchiseID }}" SELECTED>{{ franchiseName }}</option>
+                    {% endfor %}
                 {% endfor %}     
             </select>
     <br><br>
