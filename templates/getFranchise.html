@@ -11,7 +11,7 @@
         <label for="franchises">Choose your franchise:</label>
             <select name="FranchiseName" id="franchises">
                 {% for row in franchise_list %}
-                    {% for row_items in row}
+                    {% for row_items in row%}
                         {% for franchiseID, franchiseName in row_items.items() %}
                             <option value="{{ franchiseID }}" SELECTED>{{ franchiseName }}</option>
                         {% endfor %}
