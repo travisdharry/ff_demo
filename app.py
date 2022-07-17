@@ -150,7 +150,7 @@ def getFranchise():
     franchise_df = pd.DataFrame(data)
     franchise_df.columns=['FranchiseID','FranchiseName']
 
-    return render_template("getFranchise.html", franchise_list=[franchise_df.to_dict(orient='index')])
+    return render_template("getFranchise.html", franchise_list=[franchise_df.to_dict(orient='records')])
 
 @app.route('/landing', methods=['POST'])
 #@login_required
