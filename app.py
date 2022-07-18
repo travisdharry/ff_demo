@@ -284,7 +284,18 @@ def waiverWire():
     user_league = session.get('user_league', None)
     user_franchise = session.get('user_franchise', None)
 
-    player_df = get_df("player_df")
+    # Get Franchises in the league
+    urlString = f"https://www54.myfantasyleague.com/2022/export?TYPE=league&L={user_league}"
+    response = requests.get(urlString)
+    soup = BeautifulSoup(response.content,'xml')
+    data = []
+    franchises = soup.find_all('franchise')
+    for i in range(len(franchises)):
+        rows = [franchises[i].get("id"), franchises[i].get("name")]
+        data.append(rows)
+    franchise_df = pd.DataFrame(data)
+    franchise_df.columns=['FranchiseID','FranchiseName']
+    franchise_df = franchise_df.append({"FranchiseID":"FA", "FranchiseName":"Free Agent"}, ignore_index=True)
 
     # Get franchise rosters
     urlString = f"https://www54.myfantasyleague.com/2022/export?TYPE=rosters&L={user_league}&FRANCHISE={user_franchise}"
@@ -312,8 +323,11 @@ def waiverWire():
     rosters_df = rosters_df.append(fa_df)
     rosters_df.columns=['FranchiseID','Week','PlayerID','RosterStatus']
 
-        # Merge all dfs
-    complete = player_df.merge(rosters_df, on='PlayerID', how='left')
+    # Get all players, sharkRank, and ADP
+    player_df = get_df("player_df")
+
+    # Merge all dfs
+    complete = player_df.merge(rosters_df, on='PlayerID', how='left').merge(franchise_df[['FranchiseID', 'FranchiseName']], on='FranchiseID', how='left')
     complete['FranchiseID'].fillna("FA", inplace=True)
     complete['FranchiseName'].fillna("Free Agent", inplace=True)
     complete['RosterStatus'].fillna("Free Agent", inplace=True)
