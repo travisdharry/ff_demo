@@ -312,7 +312,15 @@ def waiverWire():
     rosters_df = rosters_df.append(fa_df)
     rosters_df.columns=['FranchiseID','Week','PlayerID','RosterStatus']
 
-    return render_template("waiverWire.html", tables=[rosters_df.to_html(classes='data')], titles=rosters_df.columns.values)
+        # Merge all dfs
+    complete = player_df.merge(rosters_df, on='PlayerID', how='left')
+    complete['FranchiseID'].fillna("FA", inplace=True)
+    complete['FranchiseName'].fillna("Free Agent", inplace=True)
+    complete['RosterStatus'].fillna("Free Agent", inplace=True)
+    complete = complete.sort_values(by=['SharkRank'])
+    complete.reset_index(inplace=True, drop=True)
+
+    return render_template("waiverWire.html", tables=[complete.to_html(classes='data')], titles=complete.columns.values)
 
 
 
