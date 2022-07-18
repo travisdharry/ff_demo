@@ -329,7 +329,7 @@ def waiverWire():
     # Merge all dfs
     complete = player_df.merge(rosters_df, on='PlayerID', how='left').merge(franchise_df[['FranchiseID', 'FranchiseName']], on='FranchiseID', how='left')
     complete = complete[complete['FranchiseID'].notna()]
-    complete = complete.sort_values(by=['SharkRank'])
+    complete = complete.sort_values(by=['Projection_Relative'])
     complete.reset_index(inplace=True, drop=True)
 
     return render_template("waiverWire.html", tables=[complete.to_html(classes='data')], titles=complete.columns.values)
