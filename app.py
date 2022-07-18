@@ -328,9 +328,7 @@ def waiverWire():
 
     # Merge all dfs
     complete = player_df.merge(rosters_df, on='PlayerID', how='left').merge(franchise_df[['FranchiseID', 'FranchiseName']], on='FranchiseID', how='left')
-    complete['FranchiseID'].fillna("FA", inplace=True)
-    complete['FranchiseName'].fillna("Free Agent", inplace=True)
-    complete['RosterStatus'].fillna("Free Agent", inplace=True)
+    complete = complete[complete['FranchiseID'].notna()]
     complete = complete.sort_values(by=['SharkRank'])
     complete.reset_index(inplace=True, drop=True)
 
