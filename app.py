@@ -332,6 +332,8 @@ def waiverWire():
     complete = complete.sort_values(by=['Projection_Relative'], ascending=False)
     complete.reset_index(inplace=True, drop=True)
 
+    
+
     return render_template("waiverWire.html", tables=[complete.to_html(classes='data')], titles=complete.columns.values)
 
 

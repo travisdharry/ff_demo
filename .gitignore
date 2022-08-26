@@ -4,6 +4,7 @@ config.py
 .env
 sources/
 ignore/
+onetimeData/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
