@@ -1,19 +1,21 @@
-### Config
-## Import dependencies
+### Import dependencies
 # Dependencies for data manipulation
 import pandas as pd
 import numpy as np
 import os
 from datetime import datetime, date
 from dateutil.relativedelta import *
+
 # Dependencies for Databases
 import psycopg2
 from psycopg2 import OperationalError, errorcodes, errors
 from sqlalchemy import create_engine
+
 # Dependencies for APIs
 from bs4 import BeautifulSoup
 import requests
 import json
+
 # Dependencies for Webscraping
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -23,18 +25,22 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
+
+# Dependencies for random forest model
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
+from joblib import dump, load
+
 # Internal imports
 from db import get_df
-## Find environment variables
+
+# Find environment variables
 DATABASE_URL = os.environ.get("DATABASE_URL", None)
 # sqlalchemy deprecated urls which begin with "postgres://"; now it needs to start with "postgresql://"
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-
-##########
-
-### Get MyFantasyLeague player data
 # Get all players' name, team name, position
 urlString = "https://api.myfantasyleague.com/2022/export?TYPE=players"
 response = requests.get(urlString)
@@ -44,8 +50,8 @@ players = soup.find_all('player')
 for i in range(len(players)):
     rows = [players[i].get("id"), players[i].get("name"), players[i].get("position"), players[i].get("team")]
     data.append(rows)
-player_df = pd.DataFrame(data)
-player_df.columns=['PlayerID','Name', 'Position', 'Team']
+scrape1 = pd.DataFrame(data)
+scrape1.columns=['PlayerID','Name', 'Position', 'Team']
 
 # Get Shark Ranks
 urlString = "https://api.myfantasyleague.com/2022/export?TYPE=playerRanks"
@@ -77,7 +83,7 @@ adp_df['ADP'] = adp_df['ADP'].astype('float32')
 # Get any player dobs who are already in the db
 player_dobs = get_df('player_dobs')
 # Check for any players whose ages are not already in the db
-to_query_age = player_df[~player_df['PlayerID'].isin(player_dobs['PlayerID'])]
+to_query_age = scrape1[~scrape1['PlayerID'].isin(player_dobs['PlayerID'])]
 if len(to_query_age)>0:
     # Break player list into chunks small enough for the API server
     n = 50  #chunk row size
@@ -111,44 +117,43 @@ def age(born):
 player_dobs['Age'] = player_dobs['DOB'].apply(age)
 
 # Merge all dfs from MyFantasyLeague API
-player_df = player_df.merge(player_dobs, on='PlayerID', how='left')
-player_df = player_df.drop(columns='DOB')
-player_df = player_df.merge(shark_df, on='PlayerID', how='left').merge(adp_df, on='PlayerID', how='left')
-player_df['SharkRank'].fillna(3000, inplace=True)
-player_df['ADP'].fillna(3000, inplace=True)
-player_df = player_df.sort_values(by=['SharkRank'])
-player_df.reset_index(inplace=True, drop=True)  
+scrape1 = scrape1.merge(player_dobs, on='PlayerID', how='left')
+scrape1 = scrape1.drop(columns='DOB')
+scrape1 = scrape1.merge(shark_df, on='PlayerID', how='left').merge(adp_df, on='PlayerID', how='left')
+scrape1['SharkRank'].fillna(3000, inplace=True)
+scrape1['ADP'].fillna(3000, inplace=True)
+scrape1 = scrape1.sort_values(by=['SharkRank'])
+scrape1.reset_index(inplace=True, drop=True)  
 
-
-### Clean MyFantasyLeague data
+### Clean MFL data
 ## Select only relevant positions
-player_df = player_df.loc[player_df['Position'].isin(['QB', 'WR', 'RB', 'TE', 'PK', 'Def'])]
-player_df = player_df.reset_index(drop=True)
+scrape1 = scrape1.loc[scrape1['Position'].isin(['QB', 'WR', 'RB', 'TE', 'PK', 'Def'])]
+scrape1 = scrape1.reset_index(drop=True)
 ## Clean Name column
-to_join = player_df['Name'].str.split(", ", n=1, expand=True)
+to_join = scrape1['Name'].str.split(", ", n=1, expand=True)
 to_join.columns = ['lname', 'fname']
 to_join['Name'] = to_join['fname'] + " " + to_join['lname']
-player_df['Name'] = to_join['Name']
+scrape1['Name'] = to_join['Name']
 # Change name to Title Case
-player_df['Name'] = player_df['Name'].str.upper()
+scrape1['Name'] = scrape1['Name'].str.upper()
 # Drop name punctuation
-player_df['Name'] = player_df['Name'].str.replace(".", "")
-player_df['Name'] = player_df['Name'].str.replace(",", "")
-player_df['Name'] = player_df['Name'].str.replace("'", "")
+scrape1['Name'] = scrape1['Name'].str.replace(".", "")
+scrape1['Name'] = scrape1['Name'].str.replace(",", "")
+scrape1['Name'] = scrape1['Name'].str.replace("'", "")
 ## Clean position column
-player_df['Position'] = player_df['Position'].replace('Def', 'DF')
+scrape1['Position'] = scrape1['Position'].replace('Def', 'DF')
 # Clean Team column
-player_df['Team'] = player_df['Team'].replace('FA*', 'FA')
+scrape1['Team'] = scrape1['Team'].replace('FA*', 'FA')
 ## Change column names
-player_df.columns = ['id_mfl', 'player', 'pos_mfl', 'team', 'age']
+scrape1.columns = ['id_mfl', 'player', 'pos_mfl', 'team', 'age', 'sharkRank', 'adp']
 
-###############
+
 
 ### Scrape posRanks
 # Set Selenium settings
 capa = DesiredCapabilities.CHROME
 capa["pageLoadStrategy"] = "none"
-# Scrape web for stats
+# scrape2 web for stats
 url = f"https://www.ourlads.com/nfldepthcharts/depthcharts.aspx"
 PATH = "/Applications/chromedriver"
 driver = webdriver.Chrome(service=Service(PATH), desired_capabilities=capa)
@@ -156,84 +161,94 @@ wait = WebDriverWait(driver, 20)
 driver.get(url)
 wait.until(EC.presence_of_element_located((By.XPATH, "//table[@id='ctl00_phContent_gvChart']")))
 driver.execute_script("window.stop();")
-scrape = pd.read_html(driver.find_element(By.XPATH, value="//table[@id='ctl00_phContent_gvChart']").get_attribute("outerHTML"))
-scrape = scrape[0]
+scrape2 = pd.read_html(driver.find_element(By.XPATH, value="//table[@id='ctl00_phContent_gvChart']").get_attribute("outerHTML"))
+scrape2 = scrape2[0]
 
+### Clean scrape2d data
+scrape2 = scrape2[['Team', 'Pos', 'Player 1', 'Player 2','Player 3', 'Player 4', 'Player 5']]
 
-### Clean scraped posRanks
-# Select relevant columns
-scrape = scrape[['Team', 'Pos', 'Player 1', 'Player 2','Player 3', 'Player 4', 'Player 5']]
-## Transform columns into additional rows
-# Select First rank
-scrape1 = scrape[['Team', 'Pos', 'Player 1']]
-scrape1 = scrape1.rename(columns={'Player 1':'Player'})
-scrape1['posRank'] = "1"
-# Select Second rank
-scrape2 = scrape[['Team', 'Pos', 'Player 2']]
-scrape2 = scrape2.rename(columns={'Player 2':'Player'})
-scrape2['posRank'] = "2"
-# Select Third rank
-scrape3 = scrape[['Team', 'Pos', 'Player 3']]
-scrape3 = scrape3.rename(columns={'Player 3':'Player'})
-scrape3['posRank'] = "3"
-# Select Fourth rank
-scrape4 = scrape[['Team', 'Pos', 'Player 4']]
-scrape4 = scrape4.rename(columns={'Player 4':'Player'})
-scrape4['posRank'] = "4"
-# Select Fifth rank
-scrape5 = scrape[['Team', 'Pos', 'Player 5']]
-scrape5 = scrape5.rename(columns={'Player 5':'Player'})
-scrape5['posRank'] = "5"
-# Concatenate all ranks
-scrape_complete = pd.concat([scrape1, scrape2, scrape3, scrape4, scrape5], axis=0, ignore_index=True)
-## Clean Position column
+# Transform columns into rows
+scrape21 = scrape2[['Team', 'Pos', 'Player 1']]
+scrape21 = scrape21.rename(columns={'Player 1':'Player'})
+scrape21['posRank'] = "1"
+
+scrape22 = scrape2[['Team', 'Pos', 'Player 2']]
+scrape22 = scrape22.rename(columns={'Player 2':'Player'})
+scrape22['posRank'] = "2"
+
+scrape23 = scrape2[['Team', 'Pos', 'Player 3']]
+scrape23 = scrape23.rename(columns={'Player 3':'Player'})
+scrape23['posRank'] = "3"
+
+scrape24 = scrape2[['Team', 'Pos', 'Player 4']]
+scrape24 = scrape24.rename(columns={'Player 4':'Player'})
+scrape24['posRank'] = "4"
+
+scrape25 = scrape2[['Team', 'Pos', 'Player 5']]
+scrape25 = scrape25.rename(columns={'Player 5':'Player'})
+scrape25['posRank'] = "5"
+
+scrape2_complete = pd.concat([scrape21, scrape22, scrape23, scrape24, scrape25], axis=0, ignore_index=True)
+
+# Clean Position column
 # Select only relevant positions
 posList = ['LWR', 'RWR', 'SWR', 'TE', 'QB', 'RB', 'PK', 'PR', 'KR', 'RES']
-scrape_final = scrape_complete.loc[scrape_complete['Pos'].isin(posList)]
+scrape2_final = scrape2_complete.loc[scrape2_complete['Pos'].isin(posList)]
 # Convert WR roles to "WR"
-scrape_final['Pos'].replace(["LWR", "RWR", "SWR"], "WR", inplace=True)
-scrape_final['posRank'] = scrape_final['Pos'] + scrape_final['posRank']
-scrape_final = scrape_final.reset_index(drop=True)
-scrape_final.dropna(inplace=True)
-scrape_final.drop_duplicates(subset=['Player', 'Team', 'Pos'], inplace=True)
-## Create columns for KRs and PRs
-krs = scrape_final.loc[scrape_final.Pos=='KR']
+scrape2_final['Pos'].replace(["LWR", "RWR", "SWR"], "WR", inplace=True)
+scrape2_final['posRank'] = scrape2_final['Pos'] + scrape2_final['posRank']
+scrape2_final = scrape2_final.reset_index(drop=True)
+scrape2_final.dropna(inplace=True)
+scrape2_final.drop_duplicates(subset=['Player', 'Team', 'Pos'], inplace=True)
+
+# Create columns for KRs and PRs
+krs = scrape2_final.loc[scrape2_final.Pos=='KR']
 krs = krs.drop(columns=['Pos'])
 krs.columns = ['Team', 'Player', 'KR']
-prs = scrape_final.loc[scrape_final.Pos=='PR']
+prs = scrape2_final.loc[scrape2_final.Pos=='PR']
 prs = prs.drop(columns=['Pos'])
 prs.columns = ['Team', 'Player', 'PR']
-## Join pr and pk scrapes back onto main scrape
-scrape_final = scrape_final.merge(krs, how='left', on=['Player', 'Team']).merge(prs, how='left', on=['Player', 'Team'])
-scrape_final['KR'].fillna("NO", inplace=True)
-scrape_final['PR'].fillna("NO", inplace=True)
-## Clean name column
-# Remove draft/trade info from scrape
-names = scrape_final['Player'].str.split(" ", n=2, expand=True)
-# Reorder from "Lname, Fname" to "FName LName"
+# Join pr and pk scrape2s back onto main ourlads scrape2
+scrape2_final = scrape2_final.merge(krs, how='left', on=['Player', 'Team']).merge(prs, how='left', on=['Player', 'Team'])
+scrape2_final['KR'].fillna("NO", inplace=True)
+scrape2_final['PR'].fillna("NO", inplace=True)
+
+# Clean name column
+names = scrape2_final['Player'].str.split(" ", n=2, expand=True)
 names.columns = ['a', 'b', 'c']
 names['a'] = names['a'].str.replace(",", "")
-scrape_final['Player'] = names['b'] + " " + names['a']
+scrape2_final['Player'] = names['b'] + " " + names['a']
 # Change to Upper Case
-scrape_final['Player'] = scrape_final['Player'].str.upper()
+scrape2_final['Player'] = scrape2_final['Player'].str.upper()
 # Drop punctuation
-scrape_final['Player'] = scrape_final['Player'].str.replace(".", "")
-scrape_final['Player'] = scrape_final['Player'].str.replace(",", "")
-scrape_final['Player'] = scrape_final['Player'].str.replace("'", "")
-## Change column names and order
-scrape_final = scrape_final[['Player', 'Pos', 'Team', 'posRank', 'KR', 'PR']]
-scrape_final.columns = ['player', 'pos_ol', 'team', 'posRank', 'KR', 'PR']
-## Remove separate rows for PRs and KRs
-scrape_final = scrape_final.loc[(scrape_final.pos_ol!="KR")]
-scrape_final = scrape_final.loc[(scrape_final.pos_ol!="PR")]
-## Drop position column
-scrape_final.drop(columns=['pos_ol'], inplace=True)
+scrape2_final['Player'] = scrape2_final['Player'].str.replace(".", "")
+scrape2_final['Player'] = scrape2_final['Player'].str.replace(",", "")
+scrape2_final['Player'] = scrape2_final['Player'].str.replace("'", "")
+
+# Change column names and order
+scrape2_final = scrape2_final[['Player', 'Pos', 'Team', 'posRank', 'KR', 'PR']]
+scrape2_final.columns = ['player', 'pos_ol', 'team', 'posRank', 'KR', 'PR']
+
+# Remove separate rows for PRs and KRs
+scrape2_final = scrape2_final.loc[(scrape2_final.pos_ol!="KR")]
+scrape2_final = scrape2_final.loc[(scrape2_final.pos_ol!="PR")]
+
+# Drop position column
+scrape2_final.drop(columns=['pos_ol'], inplace=True)
+scrape2_final
+
+# Rename team abbreviations
+teamDict = {
+    'ARZ':'ARI', 'ATL':'ATL', 'BAL':'BAL', 'BUF':'BUF', 'CAR':'CAR', 'CHI':'CHI', 'CIN':'CIN', 'CLE':'CLE', 
+    'DAL':'DAL', 'DEN':'DEN', 'DET':'DET', 'GB':'GBP', 'HOU':'HOU', 'IND':'IND', 'JAX':'JAC', 'KC':'KCC', 
+    'LAC':'LAC', 'LAR':'LAR', 'LV':'LVR', 'MIA':'MIA', 'MIN':'MIN', 'NE':'NEP', 'NO':'NOS', 'NYG':'NYG', 
+    'NYJ':'NYJ', 'PHI':'PHI', 'PIT':'PIT', 'SEA':'SEA', 'SF':'SFO', 'TB':'TBB', 'TEN':'TEN', 'WAS':'WAS'
+    }
+scrape2_final['team'] = scrape2_final['team'].map(teamDict)
 
 
-###############
-
-### Merge MyFantasyLeague data with scraped data
-player_df = player_df.merge(scrape_final, how='left', on=['player', 'team'])
+### Merge MyFantasyLeague data with scrape2d data
+player_df = scrape1.merge(scrape2_final, how='left', on=['player', 'team'])
 ## Clean merged df
 player_df.loc[player_df['pos_mfl']=='DF', 'posRank'] = "DF1"
 player_df['KR'].fillna("NO", inplace=True)
@@ -278,10 +293,752 @@ player_df.loc[player_df.posRank=="RES", 'posRank'] = player_df.loc[player_df.pos
 # Specify all players are in current season
 player_df['season'] = 2022
 
+### Get historical data
+prior1 = get_df('prior1')
+prior2 = get_df('prior2')
 
-###############
+# Create current_df
+# This will mean scraping the ff db site weekly
+curr = pd.DataFrame(player_df['player'])
+colList = ['gamesPlayed',
+    'passA', 'passC', 'passY', 'passT', 'passI', 'pass2', 
+    'rushA', 'rushY','rushT', 'rush2', 
+    'recC', 'recY', 'recT', 'rec2', 'fum', 
+    'XPA', 'XPM','FGA', 'FGM', 'FG50', 
+    'defSack', 'defI', 'defSaf', 'defFum', 'defBlk','defT', 'defPtsAgainst', 'defPassYAgainst', 'defRushYAgainst','defYdsAgainst'
+]
+cols = pd.DataFrame(columns=colList)
+curr = curr.merge(cols, how='left', left_index=True, right_index=True)
+curr.fillna(0, inplace=True)
+
+# Rename all columns in curr
+colList = [(x + "_curr") for x in list(curr.columns)]
+curr.columns = colList
+curr = curr.rename(columns={
+       'player_curr':'player',
+       })
+
+# Merge playerdf, currentdf, prior1, and prior2
+player_df = player_df.merge(curr, how='left', on='player').merge(prior1, how='left', on='player').merge(prior2, how='left', on='player')
+# Fill data for players who do not have prior data
+player_df.fillna(0, inplace=True)
+
+player_df.drop_duplicates(subset=['player', 'pos_mfl'], inplace=True)
+
+# Get schedule
+schedule = get_df('schedule')
+# Merge in opponents
+player_df = player_df.merge(schedule, how='left', on='team')
+
+# Rename position column in player_df
+player_df.rename(columns={'pos_mfl':'pos'}, inplace=True)
+
+# Get opponent historical data
+# select only defenses
+allDef = player_df.loc[player_df['pos']=='DF']
 
 
+# Get current defensive scores
+currDef = allDef.copy()
+# Select only relevant columns
+currDef = currDef[['team', 'week',
+       'defSack_curr', 'defI_curr',
+       'defSaf_curr', 'defFum_curr', 'defBlk_curr',
+       'defT_curr', 'defPtsAgainst_curr', 'defPassYAgainst_curr',
+       'defRushYAgainst_curr', 'defYdsAgainst_curr']]
+
+# Get prior defensive scores
+priorDef = allDef.copy()
+# Select only relevant columns
+priorDef = priorDef[['team', 'week',
+       'defSack_prior1', 'defI_prior1',
+       'defSaf_prior1', 'defFum_prior1', 'defBlk_prior1',
+       'defT_prior1', 'defPtsAgainst_prior1', 'defPassYAgainst_prior1',
+       'defRushYAgainst_prior1', 'defYdsAgainst_prior1']]
+# Merge the two defensive dfs
+allDef = currDef.merge(priorDef, how='left', on=['team', 'week'])
+
+# Rename all columns in allDef
+colList = [(x + "_opp") for x in list(allDef.columns)]
+allDef.columns = colList
+allDef = allDef.rename(columns={
+       'team_opp':'opponent',
+       'week_opp':'week'
+       })
+
+# Connect opponents to defenses
+player_df = player_df.merge(allDef, how='left', on=['opponent', 'week'])
 
 
+player_df = player_df[[
+    'season',
+    'week',
+    'team',
+    'player',
+    'age',
+    'sharkRank', 
+    'adp',
+    'KR',
+    'PR',
+    'RES',
+    'pos',
+    'posRank',
+    'opponent',
+    'passA_curr',
+    'passC_curr',
+    'passY_curr',
+    'passT_curr',
+    'passI_curr',
+    'pass2_curr',
+    'rushA_curr',
+    'rushY_curr',
+    'rushT_curr',
+    'rush2_curr',
+    'recC_curr',
+    'recY_curr',
+    'recT_curr',
+    'rec2_curr',
+    'fum_curr',
+    'XPA_curr',
+    'XPM_curr',
+    'FGA_curr',
+    'FGM_curr',
+    'FG50_curr',
+    'defSack_curr',
+    'defI_curr',
+    'defSaf_curr',
+    'defFum_curr',
+    'defBlk_curr',
+    'defT_curr',
+    'defPtsAgainst_curr',
+    'defPassYAgainst_curr',
+    'defRushYAgainst_curr',
+    'defYdsAgainst_curr',
+    'gamesPlayed_curr',
+    'gamesPlayed_prior1',
+    'passA_prior1',
+    'passC_prior1',
+    'passY_prior1',
+    'passT_prior1',
+    'passI_prior1',
+    'pass2_prior1',
+    'rushA_prior1',
+    'rushY_prior1',
+    'rushT_prior1',
+    'rush2_prior1',
+    'recC_prior1',
+    'recY_prior1',
+    'recT_prior1',
+    'rec2_prior1',
+    'fum_prior1',
+    'XPA_prior1',
+    'XPM_prior1',
+    'FGA_prior1',
+    'FGM_prior1',
+    'FG50_prior1',
+    'defSack_prior1',
+    'defI_prior1',
+    'defSaf_prior1',
+    'defFum_prior1',
+    'defBlk_prior1',
+    'defT_prior1',
+    'defPtsAgainst_prior1',
+    'defPassYAgainst_prior1',
+    'defRushYAgainst_prior1',
+    'defYdsAgainst_prior1',
+    'gamesPlayed_prior2',
+    'passA_prior2',
+    'passC_prior2',
+    'passY_prior2',
+    'passT_prior2',
+    'passI_prior2',
+    'pass2_prior2',
+    'rushA_prior2',
+    'rushY_prior2',
+    'rushT_prior2',
+    'rush2_prior2',
+    'recC_prior2',
+    'recY_prior2',
+    'recT_prior2',
+    'rec2_prior2',
+    'fum_prior2',
+    'XPA_prior2',
+    'XPM_prior2',
+    'FGA_prior2',
+    'FGM_prior2',
+    'FG50_prior2',
+    'defSack_prior2',
+    'defI_prior2',
+    'defSaf_prior2',
+    'defFum_prior2',
+    'defBlk_prior2',
+    'defT_prior2',
+    'defPtsAgainst_prior2',
+    'defPassYAgainst_prior2',
+    'defRushYAgainst_prior2',
+    'defYdsAgainst_prior2',
+    'defSack_curr_opp',
+    'defI_curr_opp',
+    'defSaf_curr_opp',
+    'defFum_curr_opp',
+    'defBlk_curr_opp',
+    'defT_curr_opp',
+    'defPtsAgainst_curr_opp',
+    'defPassYAgainst_curr_opp',
+    'defRushYAgainst_curr_opp',
+    'defYdsAgainst_curr_opp',
+    'defSack_prior1_opp',
+    'defI_prior1_opp',
+    'defSaf_prior1_opp',
+    'defFum_prior1_opp',
+    'defBlk_prior1_opp',
+    'defT_prior1_opp',
+    'defPtsAgainst_prior1_opp',
+    'defPassYAgainst_prior1_opp',
+    'defRushYAgainst_prior1_opp',
+    'defYdsAgainst_prior1_opp']]
+
+labels = [
+    'passA', 'passC', 'passY', 'passT', 'passI', 'pass2', 
+    'rushA', 'rushY', 'rushT', 'rush2', 
+    'recC', 'recY', 'recT', 'rec2', 'fum', 
+    'XPA', 'XPM', 'FGA', 'FGM', 'FG50', 
+    'defSack', 'defI', 'defSaf', 'defFum', 'defBlk', 'defT', 
+    'defPtsAgainst', 'defPassYAgainst', 'defRushYAgainst', 'defYdsAgainst'  
+]
+
+features = [
+    'week', 'age', 
+    'passA_curr', 'passC_curr', 'passY_curr', 'passT_curr', 'passI_curr', 'pass2_curr', 
+    'rushA_curr', 'rushY_curr', 'rushT_curr', 'rush2_curr', 
+    'recC_curr', 'recY_curr', 'recT_curr', 'rec2_curr', 'fum_curr', 
+    'XPA_curr', 'XPM_curr', 'FGA_curr', 'FGM_curr', 'FG50_curr', 
+    'defSack_curr', 'defI_curr', 'defSaf_curr', 'defFum_curr', 'defBlk_curr', 'defT_curr', 
+    'defPtsAgainst_curr', 'defPassYAgainst_curr', 'defRushYAgainst_curr', 'defYdsAgainst_curr', 
+    'gamesPlayed_curr', 
+    'gamesPlayed_prior1', 
+    'passA_prior1', 'passC_prior1', 'passY_prior1', 'passT_prior1', 'passI_prior1', 'pass2_prior1', 
+    'rushA_prior1', 'rushY_prior1', 'rushT_prior1', 'rush2_prior1', 
+    'recC_prior1', 'recY_prior1', 'recT_prior1', 'rec2_prior1', 'fum_prior1', 
+    'XPA_prior1', 'XPM_prior1', 'FGA_prior1', 'FGM_prior1', 'FG50_prior1', 
+    'defSack_prior1', 'defI_prior1', 'defSaf_prior1', 'defFum_prior1', 'defBlk_prior1', 'defT_prior1', 
+    'defPtsAgainst_prior1', 'defPassYAgainst_prior1', 'defRushYAgainst_prior1', 'defYdsAgainst_prior1', 
+    'gamesPlayed_prior2', 
+    'passA_prior2', 'passC_prior2', 'passY_prior2', 'passT_prior2', 'passI_prior2', 'pass2_prior2', 
+    'rushA_prior2', 'rushY_prior2', 'rushT_prior2', 'rush2_prior2', 
+    'recC_prior2', 'recY_prior2', 'recT_prior2', 'rec2_prior2', 'fum_prior2', 
+    'XPA_prior2', 'XPM_prior2', 'FGA_prior2', 'FGM_prior2', 'FG50_prior2', 
+    'defSack_prior2', 'defI_prior2', 'defSaf_prior2', 'defFum_prior2', 'defBlk_prior2', 'defT_prior2', 
+    'defPtsAgainst_prior2', 'defPassYAgainst_prior2', 'defRushYAgainst_prior2', 'defYdsAgainst_prior2', 
+    'defSack_curr_opp', 'defI_curr_opp', 'defSaf_curr_opp', 'defFum_curr_opp', 'defBlk_curr_opp', 'defT_curr_opp', 
+    'defPtsAgainst_curr_opp', 'defPassYAgainst_curr_opp', 'defRushYAgainst_curr_opp', 'defYdsAgainst_curr_opp', 
+    'defSack_prior1_opp', 'defI_prior1_opp', 'defSaf_prior1_opp', 'defFum_prior1_opp', 'defBlk_prior1_opp', 'defT_prior1_opp', 
+    'defPtsAgainst_prior1_opp', 'defPassYAgainst_prior1_opp', 'defRushYAgainst_prior1_opp', 'defYdsAgainst_prior1_opp', 
+    'pos', 'posRank'
+]
+
+### WR Predictions
+# Read player model and ages
+xl2 = player_df.copy()
+# Select only one player position
+xl2 = xl2.loc[xl2.posRank.isin(['WR1', 'WR2', 'WR3'])]
+xl2 = xl2.loc[xl2.pos=='WR']
+xl2 = xl2.dropna()
+xl2.reset_index(inplace=True, drop=True)
+# Select features
+X = xl2[features]
+header = xl2[[
+    'season',
+    'week',
+    'team',
+    'player',
+    'age',
+    'sharkRank', 
+    'adp',
+    'KR',
+    'PR',
+    'RES',
+    'pos',
+    'posRank',
+    'opponent'
+]]
+# Encode categorical features
+X = pd.get_dummies(X, columns = ['pos', 'posRank'])
+#load saved model
+regressor = load('models/rfmodel_WR1.joblib')
+# Run model
+y_pred = regressor.predict(X)
+y_pred = pd.DataFrame(y_pred)
+y_pred.columns = labels
+y_pred
+# Calculate FANTASY scores
+# Define scoring multiplier based on league settings
+multiplier = [
+    0,0,.04,4,-2,2,.1,.1,6,2,.25,.1,6,2,-2,0,1,0,3,5,1,2,2,2,1.5,6,0,0,0,0,1,1
+]
+# Define bins for defensive PointsAgainst and YardsAgainst based on MFL scoring categories
+binList_defPts = [-5,0,6,13,17,21,27,34,45,59,99]
+binList_defYds = [0,274,324,375,425,999]
+# Define correlating scores for defensive PointsAgainst and YardsAgainst based on league settings
+ptList_defPts = [10,8,7,5,3,2,0,-1,-3,-5]
+ptList_defYds = [5,2,0,-2,-5]
+# Bin and cut the defensive predictions
+y_pred['defPtsBin'] = pd.cut(y_pred['defPtsAgainst'], bins=binList_defPts, include_lowest=True, labels=ptList_defPts)
+y_pred['defYdsBin'] = pd.cut(y_pred['defYdsAgainst'], bins=binList_defYds, include_lowest=True, labels=ptList_defYds)
+# Merge predictions with header columns so we know the players' position
+a_pred = header.merge(y_pred, left_index=True, right_index=True)
+# Assign value of zero to all non-defensive players' bins
+a_pred.loc[a_pred['pos']!='DF', 'defPtsBin'] = 0
+a_pred.loc[a_pred['pos']!='DF', 'defYdsBin'] = 0
+# Drop the header columns again
+a_pred = a_pred.drop(columns=['week','season','team','player','age','sharkRank','adp','pos','KR','PR','RES','posRank','opponent'])
+# Create function to apply scoring multiplier
+def multer(row):
+    return row.multiply(multiplier)
+# Apply scoring multiplier to predictions
+c = a_pred.apply(multer, axis=1)
+c = c.apply(np.sum, axis=1)
+c = pd.DataFrame(c, columns=['pred'])
+# Merge header columns with predictions
+WRdf = header.merge(c, left_index=True, right_index=True)
+
+
+### RB Predictions
+# Read player model and ages
+xl2 = player_df.copy()
+# Select only one player position
+xl2 = xl2.loc[xl2.posRank.isin(['RB1', 'RB2', 'RB3'])]
+xl2 = xl2.loc[xl2.pos=='RB']
+xl2 = xl2.dropna()
+xl2.reset_index(inplace=True, drop=True)
+# Select features
+X = xl2[features]
+header = xl2[[
+    'season',
+    'week',
+    'team',
+    'player',
+    'age',
+    'sharkRank', 
+    'adp',
+    'KR',
+    'PR',
+    'RES',
+    'pos',
+    'posRank',
+    'opponent'
+]]
+# Encode categorical features
+X = pd.get_dummies(X, columns = ['pos', 'posRank'])
+#load saved model
+regressor = load('models/rfmodel_RB1.joblib')
+# Run model
+y_pred = regressor.predict(X)
+y_pred = pd.DataFrame(y_pred)
+y_pred.columns = labels
+# Calculate FANTASY scores
+# Define scoring multiplier based on league settings
+multiplier = [
+    0,0,.04,4,-2,2,.1,.1,6,2,.25,.1,6,2,-2,0,1,0,3,5,1,2,2,2,1.5,6,0,0,0,0,1,1
+]
+# Define bins for defensive PointsAgainst and YardsAgainst based on MFL scoring categories
+binList_defPts = [-5,0,6,13,17,21,27,34,45,59,99]
+binList_defYds = [0,274,324,375,425,999]
+# Define correlating scores for defensive PointsAgainst and YardsAgainst based on league settings
+ptList_defPts = [10,8,7,5,3,2,0,-1,-3,-5]
+ptList_defYds = [5,2,0,-2,-5]
+# Bin and cut the defensive predictions
+y_pred['defPtsBin'] = pd.cut(y_pred['defPtsAgainst'], bins=binList_defPts, include_lowest=True, labels=ptList_defPts)
+y_pred['defYdsBin'] = pd.cut(y_pred['defYdsAgainst'], bins=binList_defYds, include_lowest=True, labels=ptList_defYds)
+# Merge predictions with header columns so we know the players' position
+a_pred = header.merge(y_pred, left_index=True, right_index=True)
+# Assign value of zero to all non-defensive players' bins
+a_pred.loc[a_pred['pos']!='DF', 'defPtsBin'] = 0
+a_pred.loc[a_pred['pos']!='DF', 'defYdsBin'] = 0
+# Drop the header columns again
+a_pred = a_pred.drop(columns=['week','season','team','player','age','sharkRank','adp','pos','KR','PR','RES','posRank','opponent'])
+# Create function to apply scoring multiplier
+def multer(row):
+    return row.multiply(multiplier)
+# Apply scoring multiplier to predictions
+c = a_pred.apply(multer, axis=1)
+c = c.apply(np.sum, axis=1)
+c = pd.DataFrame(c, columns=['pred'])
+# Merge header columns with predictions
+RBdf = header.merge(c, left_index=True, right_index=True)
+
+
+### QB Predictions
+# Read player model and ages
+xl2 = player_df.copy()
+# Select only one player position
+xl2 = xl2.loc[xl2.posRank.isin(['QB1', 'QB2', 'QB3'])]
+xl2 = xl2.loc[xl2.pos=='QB']
+xl2 = xl2.dropna()
+xl2.reset_index(inplace=True, drop=True)
+# Select features
+X = xl2[features]
+header = xl2[[
+    'season',
+    'week',
+    'team',
+    'player',
+    'age',
+    'sharkRank', 
+    'adp',
+    'KR',
+    'PR',
+    'RES',
+    'pos',
+    'posRank',
+    'opponent'
+]]
+# Encode categorical features
+X = pd.get_dummies(X, columns = ['pos', 'posRank'])
+#load saved model
+regressor = load('models/rfmodel_QB1.joblib')
+# Run model
+y_pred = regressor.predict(X)
+y_pred = pd.DataFrame(y_pred)
+y_pred.columns = labels
+# Calculate FANTASY scores
+# Define scoring multiplier based on league settings
+multiplier = [
+    0,0,.04,4,-2,2,.1,.1,6,2,.25,.1,6,2,-2,0,1,0,3,5,1,2,2,2,1.5,6,0,0,0,0,1,1
+]
+# Define bins for defensive PointsAgainst and YardsAgainst based on MFL scoring categories
+binList_defPts = [-5,0,6,13,17,21,27,34,45,59,99]
+binList_defYds = [0,274,324,375,425,999]
+# Define correlating scores for defensive PointsAgainst and YardsAgainst based on league settings
+ptList_defPts = [10,8,7,5,3,2,0,-1,-3,-5]
+ptList_defYds = [5,2,0,-2,-5]
+# Bin and cut the defensive predictions
+y_pred['defPtsBin'] = pd.cut(y_pred['defPtsAgainst'], bins=binList_defPts, include_lowest=True, labels=ptList_defPts)
+y_pred['defYdsBin'] = pd.cut(y_pred['defYdsAgainst'], bins=binList_defYds, include_lowest=True, labels=ptList_defYds)
+# Merge predictions with header columns so we know the players' position
+a_pred = header.merge(y_pred, left_index=True, right_index=True)
+# Assign value of zero to all non-defensive players' bins
+a_pred.loc[a_pred['pos']!='DF', 'defPtsBin'] = 0
+a_pred.loc[a_pred['pos']!='DF', 'defYdsBin'] = 0
+# Drop the header columns again
+a_pred = a_pred.drop(columns=['week','season','team','player','age','sharkRank','adp','pos','KR','PR','RES','posRank','opponent'])
+# Create function to apply scoring multiplier
+def multer(row):
+    return row.multiply(multiplier)
+# Apply scoring multiplier to predictions
+c = a_pred.apply(multer, axis=1)
+c = c.apply(np.sum, axis=1)
+c = pd.DataFrame(c, columns=['pred'])
+# Merge header columns with predictions
+QBdf = header.merge(c, left_index=True, right_index=True)
+
+
+### TE Predictions
+# Read player model and ages
+xl2 = player_df.copy()
+# Select only one player position
+xl2 = xl2.loc[xl2.posRank.isin(['TE1', 'TE2', 'TE3'])]
+xl2 = xl2.loc[xl2.pos=='TE']
+xl2 = xl2.dropna()
+xl2.reset_index(inplace=True, drop=True)
+# Select features
+X = xl2[features]
+header = xl2[[
+    'season',
+    'week',
+    'team',
+    'player',
+    'age',
+    'sharkRank', 
+    'adp',
+    'KR',
+    'PR',
+    'RES',
+    'pos',
+    'posRank',
+    'opponent'
+]]
+# Encode categorical features
+X = pd.get_dummies(X, columns = ['pos', 'posRank'])
+#load saved model
+regressor = load('models/rfmodel_TE1.joblib')
+# Run model
+y_pred = regressor.predict(X)
+y_pred = pd.DataFrame(y_pred)
+y_pred.columns = labels
+# Calculate FANTASY scores
+# Define scoring multiplier based on league settings
+multiplier = [
+    0,0,.04,4,-2,2,.1,.1,6,2,.25,.1,6,2,-2,0,1,0,3,5,1,2,2,2,1.5,6,0,0,0,0,1,1
+]
+# Define bins for defensive PointsAgainst and YardsAgainst based on MFL scoring categories
+binList_defPts = [-5,0,6,13,17,21,27,34,45,59,99]
+binList_defYds = [0,274,324,375,425,999]
+# Define correlating scores for defensive PointsAgainst and YardsAgainst based on league settings
+ptList_defPts = [10,8,7,5,3,2,0,-1,-3,-5]
+ptList_defYds = [5,2,0,-2,-5]
+# Bin and cut the defensive predictions
+y_pred['defPtsBin'] = pd.cut(y_pred['defPtsAgainst'], bins=binList_defPts, include_lowest=True, labels=ptList_defPts)
+y_pred['defYdsBin'] = pd.cut(y_pred['defYdsAgainst'], bins=binList_defYds, include_lowest=True, labels=ptList_defYds)
+# Merge predictions with header columns so we know the players' position
+a_pred = header.merge(y_pred, left_index=True, right_index=True)
+# Assign value of zero to all non-defensive players' bins
+a_pred.loc[a_pred['pos']!='DF', 'defPtsBin'] = 0
+a_pred.loc[a_pred['pos']!='DF', 'defYdsBin'] = 0
+# Drop the header columns again
+a_pred = a_pred.drop(columns=['week','season','team','player','age','sharkRank','adp','pos','KR','PR','RES','posRank','opponent'])
+# Create function to apply scoring multiplier
+def multer(row):
+    return row.multiply(multiplier)
+# Apply scoring multiplier to predictions
+c = a_pred.apply(multer, axis=1)
+c = c.apply(np.sum, axis=1)
+c = pd.DataFrame(c, columns=['pred'])
+# Merge header columns with predictions
+TEdf = header.merge(c, left_index=True, right_index=True)
+
+
+### PK Predictions
+# Read player model and ages
+xl2 = player_df.copy()
+# Select only one player position
+xl2 = xl2.loc[xl2.posRank.isin(['PK1', 'PK2', 'PK3'])]
+xl2 = xl2.loc[xl2.pos=='PK']
+xl2 = xl2.dropna()
+xl2.reset_index(inplace=True, drop=True)
+# Select features
+X = xl2[features]
+header = xl2[[
+    'season',
+    'week',
+    'team',
+    'player',
+    'age',
+    'sharkRank', 
+    'adp',
+    'KR',
+    'PR',
+    'RES',
+    'pos',
+    'posRank',
+    'opponent'
+]]
+# Encode categorical features
+X = pd.get_dummies(X, columns = ['pos', 'posRank'])
+#load saved model
+regressor = load('models/rfmodel_PK1.joblib')
+# Run model
+y_pred = regressor.predict(X)
+y_pred = pd.DataFrame(y_pred)
+y_pred.columns = labels
+# Calculate FANTASY scores
+# Define scoring multiplier based on league settings
+multiplier = [
+    0,0,.04,4,-2,2,.1,.1,6,2,.25,.1,6,2,-2,0,1,0,3,5,1,2,2,2,1.5,6,0,0,0,0,1,1
+]
+# Define bins for defensive PointsAgainst and YardsAgainst based on MFL scoring categories
+binList_defPts = [-5,0,6,13,17,21,27,34,45,59,99]
+binList_defYds = [0,274,324,375,425,999]
+# Define correlating scores for defensive PointsAgainst and YardsAgainst based on league settings
+ptList_defPts = [10,8,7,5,3,2,0,-1,-3,-5]
+ptList_defYds = [5,2,0,-2,-5]
+# Bin and cut the defensive predictions
+y_pred['defPtsBin'] = pd.cut(y_pred['defPtsAgainst'], bins=binList_defPts, include_lowest=True, labels=ptList_defPts)
+y_pred['defYdsBin'] = pd.cut(y_pred['defYdsAgainst'], bins=binList_defYds, include_lowest=True, labels=ptList_defYds)
+# Merge predictions with header columns so we know the players' position
+a_pred = header.merge(y_pred, left_index=True, right_index=True)
+# Assign value of zero to all non-defensive players' bins
+a_pred.loc[a_pred['pos']!='DF', 'defPtsBin'] = 0
+a_pred.loc[a_pred['pos']!='DF', 'defYdsBin'] = 0
+# Drop the header columns again
+a_pred = a_pred.drop(columns=['week','season','team','player','age','sharkRank','adp','pos','KR','PR','RES','posRank','opponent'])
+# Create function to apply scoring multiplier
+def multer(row):
+    return row.multiply(multiplier)
+# Apply scoring multiplier to predictions
+c = a_pred.apply(multer, axis=1)
+c = c.apply(np.sum, axis=1)
+c = pd.DataFrame(c, columns=['pred'])
+# Merge header columns with predictions
+PKdf = header.merge(c, left_index=True, right_index=True)
+
+
+### DF Predictions
+# Read player model and ages
+xl2 = player_df.copy()
+# Select only one player position
+xl2 = xl2.loc[xl2.posRank.isin(['DF1', 'DF2', 'DF3'])]
+xl2 = xl2.loc[xl2.pos=='DF']
+xl2 = xl2.dropna()
+xl2.reset_index(inplace=True, drop=True)
+# Select features
+X = xl2[features]
+header = xl2[[
+    'season',
+    'week',
+    'team',
+    'player',
+    'age',
+    'sharkRank', 
+    'adp',
+    'KR',
+    'PR',
+    'RES',
+    'pos',
+    'posRank',
+    'opponent'
+]]
+# Encode categorical features
+X = pd.get_dummies(X, columns = ['pos', 'posRank'])
+#load saved model
+regressor = load('models/rfmodel_DF1.joblib')
+# Run model
+y_pred = regressor.predict(X)
+y_pred = pd.DataFrame(y_pred)
+y_pred.columns = labels
+# Calculate FANTASY scores
+# Define scoring multiplier based on league settings
+multiplier = [
+    0,0,.04,4,-2,2,.1,.1,6,2,.25,.1,6,2,-2,0,1,0,3,5,1,2,2,2,1.5,6,0,0,0,0,1,1
+]
+# Define bins for defensive PointsAgainst and YardsAgainst based on MFL scoring categories
+binList_defPts = [-5,0,6,13,17,21,27,34,45,59,99]
+binList_defYds = [0,274,324,375,425,999]
+# Define correlating scores for defensive PointsAgainst and YardsAgainst based on league settings
+ptList_defPts = [10,8,7,5,3,2,0,-1,-3,-5]
+ptList_defYds = [5,2,0,-2,-5]
+# Bin and cut the defensive predictions
+y_pred['defPtsBin'] = pd.cut(y_pred['defPtsAgainst'], bins=binList_defPts, include_lowest=True, labels=ptList_defPts)
+y_pred['defYdsBin'] = pd.cut(y_pred['defYdsAgainst'], bins=binList_defYds, include_lowest=True, labels=ptList_defYds)
+# Merge predictions with header columns so we know the players' position
+a_pred = header.merge(y_pred, left_index=True, right_index=True)
+# Assign value of zero to all non-defensive players' bins
+a_pred.loc[a_pred['pos']!='DF', 'defPtsBin'] = 0
+a_pred.loc[a_pred['pos']!='DF', 'defYdsBin'] = 0
+# Drop the header columns again
+a_pred = a_pred.drop(columns=['week','season','team','player','age','sharkRank','adp','pos','KR','PR','RES','posRank','opponent'])
+# Create function to apply scoring multiplier
+def multer(row):
+    return row.multiply(multiplier)
+# Apply scoring multiplier to predictions
+c = a_pred.apply(multer, axis=1)
+c = c.apply(np.sum, axis=1)
+c = pd.DataFrame(c, columns=['pred'])
+# Merge header columns with predictions
+DFdf = header.merge(c, left_index=True, right_index=True)
+
+
+# Merge all positions' predictions
+complete = pd.concat([WRdf, RBdf, QBdf, TEdf, PKdf, DFdf], axis=0)
+
+# Create summary of annual scores
+# analyze weekly df
+tPred = complete.groupby('player')['pred'].sum().to_frame()
+tPred.reset_index(inplace=True)
+info = complete.drop_duplicates(subset=['player', 'pos'], keep='first')
+info = info[[
+    'player', 'age', 'team', 'pos', 'posRank', 'KR', 'PR', 'RES', 'sharkRank', 'adp'
+]]
+# Merge all predictions  
+fullPred = info.merge(tPred, how='left', left_on='player', right_on='player')
+
+# Convert Shark and ADP to point predictions
+# Split player df by player pos
+qbs = fullPred[fullPred['pos'] == "QB"]
+qbs.reset_index(inplace=True, drop=True)
+rbs = fullPred[fullPred['pos'] == "RB"]
+rbs.reset_index(inplace=True, drop=True)
+wrs = fullPred[fullPred['pos'] == "WR"]
+wrs.reset_index(inplace=True, drop=True)
+tes = fullPred[fullPred['pos'] == "TE"]
+tes.reset_index(inplace=True, drop=True)
+pks = fullPred[fullPred['pos'] == "PK"]
+pks.reset_index(inplace=True, drop=True)
+defs = fullPred[fullPred['pos'] == "DF"]
+defs.reset_index(inplace=True, drop=True)
+
+# Get standard point projections
+point_projections = get_df("point_projections")
+
+# Split point_projection df by player position
+qb_proj = point_projections[point_projections['Position'] == "QB"]
+qb_proj.reset_index(inplace=True, drop=True)
+rb_proj = point_projections[point_projections['Position'] == "RB"]
+rb_proj.reset_index(inplace=True, drop=True)
+wr_proj = point_projections[point_projections['Position'] == "WR"]
+wr_proj.reset_index(inplace=True, drop=True)
+te_proj = point_projections[point_projections['Position'] == "TE"]
+te_proj.reset_index(inplace=True, drop=True)
+pk_proj = point_projections[point_projections['Position'] == "PK"]
+pk_proj.reset_index(inplace=True, drop=True)
+def_proj = point_projections[point_projections['Position'] == "Def"]
+def_proj.reset_index(inplace=True, drop=True)
+
+# Join dfs for current year to point_projection dfs
+# Sort current year players by SharkRank
+for df in [qbs, rbs, wrs, tes, pks, defs]:
+    df.sort_values(by='sharkRank', inplace=True)
+    df.reset_index(inplace=True, drop=True)
+# Merge dfs
+qbs = pd.merge(qbs, qb_proj[['Projection_Relative', 'Projection_Absolute']], how="left", left_index=True, right_index=True)
+rbs = pd.merge(rbs, rb_proj[['Projection_Relative', 'Projection_Absolute']], how="left", left_index=True, right_index=True)
+wrs = pd.merge(wrs, wr_proj[['Projection_Relative', 'Projection_Absolute']], how="left", left_index=True, right_index=True)
+tes = pd.merge(tes, te_proj[['Projection_Relative', 'Projection_Absolute']], how="left", left_index=True, right_index=True)
+pks = pd.merge(pks, pk_proj[['Projection_Relative', 'Projection_Absolute']], how="left", left_index=True, right_index=True)
+defs = pd.merge(defs, def_proj[['Projection_Relative', 'Projection_Absolute']], how="left", left_index=True, right_index=True)
+# Rename columns
+for df in [qbs, rbs, wrs, tes, pks, defs]:
+    df.rename(columns={'Projection_Relative':'sharkRelative', 'Projection_Absolute':'sharkAbsolute'}, inplace=True)
+
+# Join dfs for current year to point_projection dfs
+# Sort current year players by ADP
+for df in [qbs, rbs, wrs, tes, pks, defs]:
+    df.sort_values(by='adp', inplace=True)
+    df.reset_index(inplace=True, drop=True)
+# Merge dfs
+qbs = pd.merge(qbs, qb_proj[['Projection_Relative', 'Projection_Absolute']], how="left", left_index=True, right_index=True)
+rbs = pd.merge(rbs, rb_proj[['Projection_Relative', 'Projection_Absolute']], how="left", left_index=True, right_index=True)
+wrs = pd.merge(wrs, wr_proj[['Projection_Relative', 'Projection_Absolute']], how="left", left_index=True, right_index=True)
+tes = pd.merge(tes, te_proj[['Projection_Relative', 'Projection_Absolute']], how="left", left_index=True, right_index=True)
+pks = pd.merge(pks, pk_proj[['Projection_Relative', 'Projection_Absolute']], how="left", left_index=True, right_index=True)
+defs = pd.merge(defs, def_proj[['Projection_Relative', 'Projection_Absolute']], how="left", left_index=True, right_index=True)
+# Rename columns
+for df in [qbs, rbs, wrs, tes, pks, defs]:
+    df.rename(columns={'Projection_Relative':'adpRelative', 'Projection_Absolute':'adpAbsolute'}, inplace=True)
+
+# Merge all position dfs into one
+predictions = pd.concat([qbs, rbs, wrs, tes, pks, defs])
+predictions = predictions.sort_values(by=['pred'], ascending=False)
+predictions.reset_index(inplace=True, drop=True)
+
+# Send predictions to database
+# Prepare predictions df
+# Build the SQL query that will list columns and datatypes
+string1 = [x + " VARCHAR(32)" for x in predictions.columns[:1]] + [
+    x + " SMALLINT" for x in predictions.columns[1:2]] + [
+    x + " VARCHAR(32)" for x in predictions.columns[2:8]] + [
+    x + " FLOAT(8)" for x in predictions.columns[8:]]
+string1 = str(string1)
+string1 = string1.replace("'", "")
+string1 = string1.replace("[", "")
+string1 = string1.replace("]", "")
+#print(f'CREATE TABLE IF NOT EXISTS predictions({string1})')
+
+# Write the df to the Postgresql database
+try:
+    # connect to database
+    conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+    engine = create_engine(DATABASE_URL)
+    cursor = conn.cursor()
+    # Create table for schedule
+    cursor.execute(f'CREATE TABLE IF NOT EXISTS predictions({string1})')
+    conn.commit()
+    # Populate table with data
+    predictions.to_sql('predictions', engine, if_exists='replace', index = False)
+except Exception as error:
+    print(error)
+finally:
+    if conn:
+        cursor.close()
+        conn.close()
 
