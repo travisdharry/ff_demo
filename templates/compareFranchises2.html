@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compare Franchises 2</title>
+</head>
+<body>
+    <div id='chart_pred' class='chart'></div>
+    <br>
+    <div id='chart_shark' class='chart'></div>
+    <br>
+    <div id='chart_adp' class='chart'></div>
+
+</body>
+
+<script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
+<script type='text/javascript'>
+  var graphs_pred = {{graphJSON_pred | safe}};
+  Plotly.plot('chart_pred',graphs_pred,{});
+  var graphs_shark = {{graphJSON_shark | safe}};
+  Plotly.plot('chart_shark',graphs_shark,{});
+  var graphs_adp = {{graphJSON_adp | safe}};
+  Plotly.plot('chart_adp',graphs_adp,{});
+</script>
+</html>

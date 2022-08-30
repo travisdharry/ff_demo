@@ -337,7 +337,248 @@ def waiverWire():
     return render_template("waiverWire.html", tables=[complete.to_html(classes='data')], titles=complete.columns.values)
 
 
+@app.route('/compareFranchises2')
+#@login_required
+def compareFranchises2():
+    user_league = session.get("user_league")
 
+    # Get Franchises in the league
+    urlString = f"https://www54.myfantasyleague.com/2022/export?TYPE=league&L={user_league}"
+    response = requests.get(urlString)
+    soup = BeautifulSoup(response.content,'xml')
+    data = []
+    franchises = soup.find_all('franchise')
+    for i in range(len(franchises)):
+        rows = [franchises[i].get("id"), franchises[i].get("name")]
+        data.append(rows)
+    franchise_df = pd.DataFrame(data)
+    franchise_df.columns=['FranchiseID','FranchiseName']
+    franchise_df = franchise_df.append({"FranchiseID":"FA", "FranchiseName":"Free Agent"}, ignore_index=True)
+
+    # Get franchise rosters
+    urlString = f"https://www54.myfantasyleague.com/2022/export?TYPE=rosters&L={user_league}"
+    response = requests.get(urlString)
+    soup = BeautifulSoup(response.content,'xml')
+    data = []
+    franchises = soup.find_all('franchise')
+    for i in range(0,len(franchises)):
+        current_franchise = franchises[i].find_all('player')
+        for j in range(0,len(current_franchise)):
+            rows = [franchises[i].get("id"), franchises[i].get("week"), current_franchise[j].get("id"), current_franchise[j].get("status")]
+            data.append(rows)
+    rosters_df = pd.DataFrame(data)
+
+    # Get Free Agents
+    urlString = f"https://www54.myfantasyleague.com/2022/export?TYPE=freeAgents&L={user_league}"
+    response = requests.get(urlString)
+    soup = BeautifulSoup(response.content,'xml')
+    data = []
+    freeAgents = soup.find_all('player')
+    for i in range(len(freeAgents)):
+        rows = ["FA", "", freeAgents[i].get("id"), "Free Agent"]
+        data.append(rows)
+    fa_df = pd.DataFrame(data)
+    rosters_df = rosters_df.append(fa_df)
+    rosters_df.columns=['FranchiseID','Week','PlayerID','RosterStatus']
+
+    # Get all players, sharkRank, and ADP
+    predictions = get_df("predictions")
+
+    # Merge all dfs
+    complete = predictions.merge(rosters_df, left_on='id_mfl', right_on='PlayerID', how='left').merge(franchise_df[['FranchiseID', 'FranchiseName']], on='FranchiseID', how='left')
+    complete['FranchiseID'].fillna("FA", inplace=True)
+    complete['FranchiseName'].fillna("Free Agent", inplace=True)
+    complete['RosterStatus'].fillna("Free Agent", inplace=True)
+
+    # Split complete df by player pos
+    qbs = complete[complete['pos'] == "QB"]
+    qbs.reset_index(inplace=True, drop=True)
+    rbs = complete[complete['pos'] == "RB"]
+    rbs.reset_index(inplace=True, drop=True)
+    wrs = complete[complete['pos'] == "WR"]
+    wrs.reset_index(inplace=True, drop=True)
+    tes = complete[complete['pos'] == "TE"]
+    tes.reset_index(inplace=True, drop=True)
+    pks = complete[complete['pos'] == "PK"]
+    pks.reset_index(inplace=True, drop=True)
+    defs = complete[complete['pos'] == "DF"]
+    defs.reset_index(inplace=True, drop=True)
+
+
+    ### ADP Predictions
+    # Roster Builder logic
+    qbs_top = qbs.sort_values(by='adpAbsolute', ascending=False, ignore_index=True).groupby('FranchiseName').head(1)
+    rbs_top = rbs.sort_values(by='adpAbsolute', ascending=False, ignore_index=True).groupby('FranchiseName').head(2)
+    wrs_top = wrs.sort_values(by='adpAbsolute', ascending=False, ignore_index=True).groupby('FranchiseName').head(3)
+    tes_top = tes.sort_values(by='adpAbsolute', ascending=False, ignore_index=True).groupby('FranchiseName').head(2)
+    pks_top = pks.sort_values(by='adpAbsolute', ascending=False, ignore_index=True).groupby('FranchiseName').head(2)
+    defs_top = defs.sort_values(by='adpAbsolute', ascending=False, ignore_index=True).groupby('FranchiseName').head(2)
+
+    qbs_remainder = qbs[~qbs['PlayerID'].isin(qbs_top['PlayerID'])].groupby('FranchiseName').head(1)
+    rbs_remainder = rbs[~rbs['PlayerID'].isin(rbs_top['PlayerID'])].groupby('FranchiseName').head(3)
+    wrs_remainder = wrs[~wrs['PlayerID'].isin(wrs_top['PlayerID'])].groupby('FranchiseName').head(3)
+    tes_remainder = tes[~tes['PlayerID'].isin(tes_top['PlayerID'])].groupby('FranchiseName').head(3)
+
+    remainder = pd.concat([qbs_remainder, rbs_remainder, wrs_remainder, tes_remainder])
+
+    top_remainders = remainder.sort_values(by='adpAbsolute', ascending=False, ignore_index=True).groupby('FranchiseName').head(3)
+
+    players_onthefield = pd.concat([qbs_top, rbs_top, wrs_top, tes_top, pks_top, defs_top, top_remainders])
+    players_onthefield = players_onthefield.sort_values(by='adpAbsolute', ascending=False, ignore_index=True)
+
+    fran_rank = players_onthefield.groupby('FranchiseName').sum().sort_values(by='adpAbsolute', ascending=False)
+
+    sorter = fran_rank.index
+
+    players_onthefield.FranchiseName = players_onthefield.FranchiseName.astype("category")
+    players_onthefield.FranchiseName.cat.set_categories(sorter, inplace=True)
+    players_onthefield.sort_values(["FranchiseName"], inplace=True)
+
+    # remove Free Agents
+    players_onthefield = players_onthefield.loc[players_onthefield.FranchiseID!="FA"]
+
+    # Find the lowest scoring player on the field and set them as the low bar
+    for x in ["QB", "RB", "WR", "TE", "PK", "DF"]:
+        players_onthefield.loc[players_onthefield['pos']==x, 'adpComp'] = players_onthefield.loc[players_onthefield['pos']==x, 'adpAbsolute'].min()
+    players_onthefield['adpRelative'] = players_onthefield['adpAbsolute'] - players_onthefield['adpComp']
+
+    # Create bar chart
+    figADP = px.bar(players_onthefield, 
+                x="FranchiseName", 
+                y="adpRelative", 
+                color="pos", 
+                text='player', 
+                color_discrete_map={
+                    "RB": "#062647", #blue #1033a6 #0c2987 1033a6 062647
+                    "TE": "#43B3AE", #teal #02687b #038097 1295ad 43B3AE
+                    "WR": "#621B74", #purple #4f22bc #643fc1 643fc1 621B74
+                    "QB": "#ffa524", #gold #f5d000 f5d000 ffa524
+                    "PK": "#0c2987", #gold #f5d000 f5d000 ffa524
+                    "DF": "#1033a6"}, #gold #f5d000 f5d000 ffa524
+                category_orders={
+                    "pos": ["RB", "QB", "WR", "TE", "PK", "DF"]}
+                )
+    figADP.update_layout(barmode='stack', xaxis={'categoryorder':'total descending'})
+
+    graphJSON_adp = json.dumps(figADP, cls=plotly.utils.PlotlyJSONEncoder)
+
+
+    ### Shark Predictions
+    # Roster Builder logic
+    qbs_top = qbs.sort_values(by='sharkAbsolute', ascending=False, ignore_index=True).groupby('FranchiseName').head(1)
+    rbs_top = rbs.sort_values(by='sharkAbsolute', ascending=False, ignore_index=True).groupby('FranchiseName').head(2)
+    wrs_top = wrs.sort_values(by='sharkAbsolute', ascending=False, ignore_index=True).groupby('FranchiseName').head(3)
+    tes_top = tes.sort_values(by='sharkAbsolute', ascending=False, ignore_index=True).groupby('FranchiseName').head(2)
+    pks_top = pks.sort_values(by='sharkAbsolute', ascending=False, ignore_index=True).groupby('FranchiseName').head(2)
+    defs_top = defs.sort_values(by='sharkAbsolute', ascending=False, ignore_index=True).groupby('FranchiseName').head(2)
+
+    qbs_remainder = qbs[~qbs['PlayerID'].isin(qbs_top['PlayerID'])].groupby('FranchiseName').head(1)
+    rbs_remainder = rbs[~rbs['PlayerID'].isin(rbs_top['PlayerID'])].groupby('FranchiseName').head(3)
+    wrs_remainder = wrs[~wrs['PlayerID'].isin(wrs_top['PlayerID'])].groupby('FranchiseName').head(3)
+    tes_remainder = tes[~tes['PlayerID'].isin(tes_top['PlayerID'])].groupby('FranchiseName').head(3)
+
+    remainder = pd.concat([qbs_remainder, rbs_remainder, wrs_remainder, tes_remainder])
+
+    top_remainders = remainder.sort_values(by='sharkAbsolute', ascending=False, ignore_index=True).groupby('FranchiseName').head(3)
+
+    players_onthefield = pd.concat([qbs_top, rbs_top, wrs_top, tes_top, pks_top, defs_top, top_remainders])
+    players_onthefield = players_onthefield.sort_values(by='sharkAbsolute', ascending=False, ignore_index=True)
+
+    fran_rank = players_onthefield.groupby('FranchiseName').sum().sort_values(by='sharkAbsolute', ascending=False)
+
+    sorter = fran_rank.index
+
+    players_onthefield.FranchiseName = players_onthefield.FranchiseName.astype("category")
+    players_onthefield.FranchiseName.cat.set_categories(sorter, inplace=True)
+    players_onthefield.sort_values(["FranchiseName"], inplace=True)
+
+    # remove Free Agents
+    players_onthefield = players_onthefield.loc[players_onthefield.FranchiseID!="FA"]
+
+    # Find the lowest scoring player on the field and set them as the low bar
+    for x in ["QB", "RB", "WR", "TE", "PK", "DF"]:
+        players_onthefield.loc[players_onthefield['pos']==x, 'sharkComp'] = players_onthefield.loc[players_onthefield['pos']==x, 'sharkAbsolute'].min()
+    players_onthefield['sharkRelative'] = players_onthefield['sharkAbsolute'] - players_onthefield['sharkComp']
+
+    # Create bar chart
+    figShark = px.bar(players_onthefield, 
+                x="FranchiseName", 
+                y="sharkRelative", 
+                color="pos", 
+                text='player', 
+                color_discrete_map={
+                    "RB": "#062647", #blue #1033a6 #0c2987 1033a6 062647
+                    "TE": "#43B3AE", #teal #02687b #038097 1295ad 43B3AE
+                    "WR": "#621B74", #purple #4f22bc #643fc1 643fc1 621B74
+                    "QB": "#ffa524", #gold #f5d000 f5d000 ffa524
+                    "PK": "#0c2987", #gold #f5d000 f5d000 ffa524
+                    "DF": "#1033a6"}, #gold #f5d000 f5d000 ffa524
+                category_orders={
+                    "pos": ["RB", "QB", "WR", "TE", "PK", "DF"]}
+                )
+    figShark.update_layout(barmode='stack', xaxis={'categoryorder':'total descending'})
+
+    graphJSON_shark = json.dumps(figShark, cls=plotly.utils.PlotlyJSONEncoder)
+
+
+
+    ### My predictions
+    # Roster Builder logic
+    qbs_top = qbs.sort_values(by='pred', ascending=False, ignore_index=True).groupby('FranchiseName').head(1)
+    rbs_top = rbs.sort_values(by='pred', ascending=False, ignore_index=True).groupby('FranchiseName').head(2)
+    wrs_top = wrs.sort_values(by='pred', ascending=False, ignore_index=True).groupby('FranchiseName').head(3)
+    tes_top = tes.sort_values(by='pred', ascending=False, ignore_index=True).groupby('FranchiseName').head(2)
+    pks_top = pks.sort_values(by='pred', ascending=False, ignore_index=True).groupby('FranchiseName').head(2)
+    defs_top = defs.sort_values(by='pred', ascending=False, ignore_index=True).groupby('FranchiseName').head(2)
+
+    qbs_remainder = qbs[~qbs['PlayerID'].isin(qbs_top['PlayerID'])].groupby('FranchiseName').head(1)
+    rbs_remainder = rbs[~rbs['PlayerID'].isin(rbs_top['PlayerID'])].groupby('FranchiseName').head(3)
+    wrs_remainder = wrs[~wrs['PlayerID'].isin(wrs_top['PlayerID'])].groupby('FranchiseName').head(3)
+    tes_remainder = tes[~tes['PlayerID'].isin(tes_top['PlayerID'])].groupby('FranchiseName').head(3)
+
+    remainder = pd.concat([qbs_remainder, rbs_remainder, wrs_remainder, tes_remainder])
+
+    top_remainders = remainder.sort_values(by='pred', ascending=False, ignore_index=True).groupby('FranchiseName').head(3)
+
+    players_onthefield = pd.concat([qbs_top, rbs_top, wrs_top, tes_top, pks_top, defs_top, top_remainders])
+    players_onthefield = players_onthefield.sort_values(by='pred', ascending=False, ignore_index=True)
+
+    fran_rank = players_onthefield.groupby('FranchiseName').sum().sort_values(by='pred', ascending=False)
+
+    sorter = fran_rank.index
+
+    players_onthefield.FranchiseName = players_onthefield.FranchiseName.astype("category")
+    players_onthefield.FranchiseName.cat.set_categories(sorter, inplace=True)
+    players_onthefield.sort_values(["FranchiseName"], inplace=True)
+
+    # remove Free Agents
+    players_onthefield = players_onthefield.loc[players_onthefield.FranchiseID!="FA"]
+
+    # Find the lowest scoring player on the field and set them as the low bar
+    for x in ["QB", "RB", "WR", "TE", "PK", "DF"]:
+        players_onthefield.loc[players_onthefield['pos']==x, 'predComp'] = players_onthefield.loc[players_onthefield['pos']==x, 'pred'].min()
+    players_onthefield['predRelative'] = players_onthefield['pred'] - players_onthefield['predComp']
+
+    # Create bar chart
+    figPred = px.bar(players_onthefield, 
+                x="FranchiseName", 
+                y="predRelative", 
+                color="pos", 
+                text='player', 
+                color_discrete_map={
+                    "RB": "#062647", #blue #1033a6 #0c2987 1033a6 062647
+                    "TE": "#43B3AE", #teal #02687b #038097 1295ad 43B3AE
+                    "WR": "#621B74", #purple #4f22bc #643fc1 643fc1 621B74
+                    "QB": "#ffa524", #gold #f5d000 f5d000 ffa524
+                    "PK": "#0c2987", #gold #f5d000 f5d000 ffa524
+                    "DF": "#1033a6"}, #gold #f5d000 f5d000 ffa524
+                category_orders={
+                    "pos": ["RB", "QB", "WR", "TE", "PK", "DF"]}
+                )
+    figPred.update_layout(barmode='stack', xaxis={'categoryorder':'total descending'})
+
+    graphJSON_pred = json.dumps(figPred, cls=plotly.utils.PlotlyJSONEncoder)
+    return render_template('compareFranchises2.html', graphJSON_pred=graphJSON_pred, graphJSON_adp=graphJSON_adp, graphJSON_shark=graphJSON_shark)
 
 
 @app.route("/logout")
