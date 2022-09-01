@@ -324,12 +324,12 @@ def waiverWire():
     rosters_df.columns=['FranchiseID','Week','PlayerID','RosterStatus']
 
     # Get all players, sharkRank, and ADP
-    player_df = get_df("player_df")
+    player_df = get_df("predictions")
 
     # Merge all dfs
-    complete = player_df.merge(rosters_df, on='PlayerID', how='left').merge(franchise_df[['FranchiseID', 'FranchiseName']], on='FranchiseID', how='left')
+    complete = player_df.merge(rosters_df, left_on='id_mfl', how='left', right_on='PlayerID').merge(franchise_df[['FranchiseID', 'FranchiseName']], on='FranchiseID', how='left')
     complete = complete[complete['FranchiseID'].notna()]
-    complete = complete.sort_values(by=['Projection_Relative'], ascending=False)
+    complete = complete.sort_values(by=['pred'], ascending=False)
     complete.reset_index(inplace=True, drop=True)
 
     
