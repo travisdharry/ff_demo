@@ -459,16 +459,35 @@ def compareFranchises2():
                 color="pos", 
                 text='player', 
                 color_discrete_map={
-                    "RB": "#062647", #blue #1033a6 #0c2987 1033a6 062647
-                    "TE": "#43B3AE", #teal #02687b #038097 1295ad 43B3AE
-                    "WR": "#621B74", #purple #4f22bc #643fc1 643fc1 621B74
-                    "QB": "#ffa524", #gold #f5d000 f5d000 ffa524
-                    "PK": "#0c2987", #gold #f5d000 f5d000 ffa524
-                    "DF": "#1033a6"}, #gold #f5d000 f5d000 ffa524
+                    "QB": "hsla(210, 60%, 25%, 1)", #blue #1033a6 #0c2987 1033a6 062647 #293745 
+                    "RB": "hsla(12, 50%, 45%, 1)", #gold #f5d000 ffa524 a23419 a34e39
+                    "WR": "hsla(267, 40%, 45%, 1)", #purple #4f22bc #643fc1 643fc1 621B74 675280
+                    "TE": "hsla(177, 68%, 36%, 1)", #teal #02687b #038097 1295ad 43B3AE
+                    "PK": "hsla(14, 30%, 40%, 1)", #gold #f5d000 ffa524 664e47
+                    "DF": "hsla(35, 70%, 65%, 1)"}, #gold #f5d000 ffa524 a49375 ffb54d
                 category_orders={
-                    "pos": ["RB", "QB", "WR", "TE", "PK", "DF"]}
+                    "pos": ["QB", "RB", "WR", "TE", "PK", "DF"]},
+                hover_name="player",
+                hover_data={
+                    'predRelative':True, 'pred':True, 'sharkAbsolute':True, 'adpAbsolute':True,
+                    'player':False, 'pos':False, 'FranchiseName':False
+                    },
+                labels={
+                    "FranchiseName":"Franchise",
+                    "predRelative":"Player Value",
+                    "pred":"ChopBlock Prediction",
+                    "sharkAbsolute":"FantasySharks Prediction",
+                    "adpAbsolute":"ADP-Based Prediction"
+                }
                 )
-    figADP.update_layout(barmode='stack', xaxis={'categoryorder':'total descending'})
+    figADP.update_layout(
+                barmode='stack', 
+                xaxis={'categoryorder':'total descending'}
+                plot_bgcolor='rgba(0,0,0,0)',
+                title="ADP-Based Predictions",
+                font_family="Skia",
+                showlegend=False
+                )
 
     graphJSON_adp = json.dumps(figADP, cls=plotly.utils.PlotlyJSONEncoder)
 
@@ -517,16 +536,35 @@ def compareFranchises2():
                 color="pos", 
                 text='player', 
                 color_discrete_map={
-                    "RB": "#062647", #blue #1033a6 #0c2987 1033a6 062647
-                    "TE": "#43B3AE", #teal #02687b #038097 1295ad 43B3AE
-                    "WR": "#621B74", #purple #4f22bc #643fc1 643fc1 621B74
-                    "QB": "#ffa524", #gold #f5d000 f5d000 ffa524
-                    "PK": "#0c2987", #gold #f5d000 f5d000 ffa524
-                    "DF": "#1033a6"}, #gold #f5d000 f5d000 ffa524
+                    "QB": "hsla(210, 60%, 25%, 1)", #blue #1033a6 #0c2987 1033a6 062647 #293745 
+                    "RB": "hsla(12, 50%, 45%, 1)", #gold #f5d000 ffa524 a23419 a34e39
+                    "WR": "hsla(267, 40%, 45%, 1)", #purple #4f22bc #643fc1 643fc1 621B74 675280
+                    "TE": "hsla(177, 68%, 36%, 1)", #teal #02687b #038097 1295ad 43B3AE
+                    "PK": "hsla(14, 30%, 40%, 1)", #gold #f5d000 ffa524 664e47
+                    "DF": "hsla(35, 70%, 65%, 1)"}, #gold #f5d000 ffa524 a49375 ffb54d
                 category_orders={
-                    "pos": ["RB", "QB", "WR", "TE", "PK", "DF"]}
+                    "pos": ["QB", "RB", "WR", "TE", "PK", "DF"]},
+                hover_name="player",
+                hover_data={
+                    'predRelative':True, 'pred':True, 'sharkAbsolute':True, 'adpAbsolute':True,
+                    'player':False, 'pos':False, 'FranchiseName':False
+                    },
+                labels={
+                    "FranchiseName":"Franchise",
+                    "predRelative":"Player Value",
+                    "pred":"ChopBlock Prediction",
+                    "sharkAbsolute":"FantasySharks Prediction",
+                    "adpAbsolute":"ADP-Based Prediction"
+                }
                 )
-    figShark.update_layout(barmode='stack', xaxis={'categoryorder':'total descending'})
+    figShark.update_layout(
+                barmode='stack', 
+                xaxis={'categoryorder':'total descending'}
+                plot_bgcolor='rgba(0,0,0,0)',
+                title="FantasySharks Predictions",
+                font_family="Skia",
+                showlegend=False
+                )
 
     graphJSON_shark = json.dumps(figShark, cls=plotly.utils.PlotlyJSONEncoder)
 
@@ -576,16 +614,35 @@ def compareFranchises2():
                 color="pos", 
                 text='player', 
                 color_discrete_map={
-                    "RB": "#062647", #blue #1033a6 #0c2987 1033a6 062647
-                    "TE": "#43B3AE", #teal #02687b #038097 1295ad 43B3AE
-                    "WR": "#621B74", #purple #4f22bc #643fc1 643fc1 621B74
-                    "QB": "#ffa524", #gold #f5d000 f5d000 ffa524
-                    "PK": "#0c2987", #gold #f5d000 f5d000 ffa524
-                    "DF": "#1033a6"}, #gold #f5d000 f5d000 ffa524
+                    "QB": "hsla(210, 60%, 25%, 1)", #blue #1033a6 #0c2987 1033a6 062647 #293745 
+                    "RB": "hsla(12, 50%, 45%, 1)", #gold #f5d000 ffa524 a23419 a34e39
+                    "WR": "hsla(267, 40%, 45%, 1)", #purple #4f22bc #643fc1 643fc1 621B74 675280
+                    "TE": "hsla(177, 68%, 36%, 1)", #teal #02687b #038097 1295ad 43B3AE
+                    "PK": "hsla(14, 30%, 40%, 1)", #gold #f5d000 ffa524 664e47
+                    "DF": "hsla(35, 70%, 65%, 1)"}, #gold #f5d000 ffa524 a49375 ffb54d
                 category_orders={
-                    "pos": ["RB", "QB", "WR", "TE", "PK", "DF"]}
+                    "pos": ["QB", "RB", "WR", "TE", "PK", "DF"]},
+                hover_name="player",
+                hover_data={
+                    'predRelative':True, 'pred':True, 'sharkAbsolute':True, 'adpAbsolute':True,
+                    'player':False, 'pos':False, 'FranchiseName':False
+                    },
+                labels={
+                    "FranchiseName":"Franchise",
+                    "predRelative":"Player Value",
+                    "pred":"ChopBlock Prediction",
+                    "sharkAbsolute":"FantasySharks Prediction",
+                    "adpAbsolute":"ADP-Based Prediction"
+                }
                 )
-    figPred.update_layout(barmode='stack', xaxis={'categoryorder':'total descending'})
+    figPred.update_layout(
+                barmode='stack', 
+                xaxis={'categoryorder':'total descending'}
+                plot_bgcolor='rgba(0,0,0,0)',
+                title="ChopBlock Predictions",
+                font_family="Skia",
+                showlegend=False
+                )
 
     graphJSON_pred = json.dumps(figPred, cls=plotly.utils.PlotlyJSONEncoder)
     return render_template('compareFranchises2.html', graphJSON_pred=graphJSON_pred, graphJSON_adp=graphJSON_adp, graphJSON_shark=graphJSON_shark)
