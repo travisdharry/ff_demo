@@ -600,6 +600,29 @@ header = xl2[[
 # Encode categorical features
 X = pd.get_dummies(X, columns = ['pos', 'posRank'])
 
+# Check if there were the correct number of posRanks in the dataset
+for rank in ["posRank_WR1", "posRank_WR2", "posRank_WR3"]:
+    if rank not in list(X.columns):
+        X[rank] = 0
+
+# Make sure we have the necessary columns
+X = X[['week', 'age', 'passA_curr', 'passC_curr', 'passY_curr', 'passT_curr', 'passI_curr', 'pass2_curr', 'rushA_curr', 'rushY_curr', 
+'rushT_curr', 'rush2_curr', 'recC_curr', 'recY_curr', 'recT_curr', 'rec2_curr', 'fum_curr', 'XPA_curr', 'XPM_curr', 'FGA_curr', 'FGM_curr', 
+'FG50_curr', 'defSack_curr', 'defI_curr', 'defSaf_curr', 'defFum_curr', 'defBlk_curr', 'defT_curr', 'defPtsAgainst_curr', 
+'defPassYAgainst_curr', 'defRushYAgainst_curr', 'defYdsAgainst_curr', 'gamesPlayed_curr', 'gamesPlayed_prior1', 'passA_prior1', 
+'passC_prior1', 'passY_prior1', 'passT_prior1', 'passI_prior1', 'pass2_prior1', 'rushA_prior1', 'rushY_prior1', 'rushT_prior1', 
+'rush2_prior1', 'recC_prior1', 'recY_prior1', 'recT_prior1', 'rec2_prior1', 'fum_prior1', 'XPA_prior1', 'XPM_prior1', 'FGA_prior1', 
+'FGM_prior1', 'FG50_prior1', 'defSack_prior1', 'defI_prior1', 'defSaf_prior1', 'defFum_prior1', 'defBlk_prior1', 'defT_prior1', 
+'defPtsAgainst_prior1', 'defPassYAgainst_prior1', 'defRushYAgainst_prior1', 'defYdsAgainst_prior1', 'gamesPlayed_prior2', 'passA_prior2', 
+'passC_prior2', 'passY_prior2', 'passT_prior2', 'passI_prior2', 'pass2_prior2', 'rushA_prior2', 'rushY_prior2', 'rushT_prior2', 
+'rush2_prior2', 'recC_prior2', 'recY_prior2', 'recT_prior2', 'rec2_prior2', 'fum_prior2', 'XPA_prior2', 'XPM_prior2', 'FGA_prior2', 
+'FGM_prior2', 'FG50_prior2', 'defSack_prior2', 'defI_prior2', 'defSaf_prior2', 'defFum_prior2', 'defBlk_prior2', 'defT_prior2', 
+'defPtsAgainst_prior2', 'defPassYAgainst_prior2', 'defRushYAgainst_prior2', 'defYdsAgainst_prior2', 'defSack_curr_opp', 'defI_curr_opp', 
+'defSaf_curr_opp', 'defFum_curr_opp', 'defBlk_curr_opp', 'defT_curr_opp', 'defPtsAgainst_curr_opp', 'defPassYAgainst_curr_opp', 
+'defRushYAgainst_curr_opp', 'defYdsAgainst_curr_opp', 'defSack_prior1_opp', 'defI_prior1_opp', 'defSaf_prior1_opp', 'defFum_prior1_opp', 
+'defBlk_prior1_opp', 'defT_prior1_opp', 'defPtsAgainst_prior1_opp', 'defPassYAgainst_prior1_opp', 'defRushYAgainst_prior1_opp', 
+'defYdsAgainst_prior1_opp', 'pos_WR', 'posRank_WR1', 'posRank_WR2', 'posRank_WR3']]
+
 #load saved model
 regressor = load('models/rfmodel_WR1.joblib')
 
@@ -672,6 +695,29 @@ header = xl2[[
 
 # Encode categorical features
 X = pd.get_dummies(X, columns = ['pos', 'posRank'])
+
+# Check if there were the correct number of posRanks in the dataset
+for rank in ["posRank_RB1", "posRank_RB2", "posRank_RB3"]:
+    if rank not in list(X.columns):
+        X[rank] = 0
+
+# Make sure we have the necessary columns
+X = X[['week', 'age', 'passA_curr', 'passC_curr', 'passY_curr', 'passT_curr', 'passI_curr', 'pass2_curr', 'rushA_curr', 'rushY_curr', 
+'rushT_curr', 'rush2_curr', 'recC_curr', 'recY_curr', 'recT_curr', 'rec2_curr', 'fum_curr', 'XPA_curr', 'XPM_curr', 'FGA_curr', 'FGM_curr', 
+'FG50_curr', 'defSack_curr', 'defI_curr', 'defSaf_curr', 'defFum_curr', 'defBlk_curr', 'defT_curr', 'defPtsAgainst_curr', 
+'defPassYAgainst_curr', 'defRushYAgainst_curr', 'defYdsAgainst_curr', 'gamesPlayed_curr', 'gamesPlayed_prior1', 'passA_prior1', 
+'passC_prior1', 'passY_prior1', 'passT_prior1', 'passI_prior1', 'pass2_prior1', 'rushA_prior1', 'rushY_prior1', 'rushT_prior1', 
+'rush2_prior1', 'recC_prior1', 'recY_prior1', 'recT_prior1', 'rec2_prior1', 'fum_prior1', 'XPA_prior1', 'XPM_prior1', 'FGA_prior1', 
+'FGM_prior1', 'FG50_prior1', 'defSack_prior1', 'defI_prior1', 'defSaf_prior1', 'defFum_prior1', 'defBlk_prior1', 'defT_prior1', 
+'defPtsAgainst_prior1', 'defPassYAgainst_prior1', 'defRushYAgainst_prior1', 'defYdsAgainst_prior1', 'gamesPlayed_prior2', 'passA_prior2', 
+'passC_prior2', 'passY_prior2', 'passT_prior2', 'passI_prior2', 'pass2_prior2', 'rushA_prior2', 'rushY_prior2', 'rushT_prior2', 
+'rush2_prior2', 'recC_prior2', 'recY_prior2', 'recT_prior2', 'rec2_prior2', 'fum_prior2', 'XPA_prior2', 'XPM_prior2', 'FGA_prior2', 
+'FGM_prior2', 'FG50_prior2', 'defSack_prior2', 'defI_prior2', 'defSaf_prior2', 'defFum_prior2', 'defBlk_prior2', 'defT_prior2', 
+'defPtsAgainst_prior2', 'defPassYAgainst_prior2', 'defRushYAgainst_prior2', 'defYdsAgainst_prior2', 'defSack_curr_opp', 'defI_curr_opp', 
+'defSaf_curr_opp', 'defFum_curr_opp', 'defBlk_curr_opp', 'defT_curr_opp', 'defPtsAgainst_curr_opp', 'defPassYAgainst_curr_opp', 
+'defRushYAgainst_curr_opp', 'defYdsAgainst_curr_opp', 'defSack_prior1_opp', 'defI_prior1_opp', 'defSaf_prior1_opp', 'defFum_prior1_opp', 
+'defBlk_prior1_opp', 'defT_prior1_opp', 'defPtsAgainst_prior1_opp', 'defPassYAgainst_prior1_opp', 'defRushYAgainst_prior1_opp', 
+'defYdsAgainst_prior1_opp', 'pos_RB', 'posRank_RB1', 'posRank_RB2', 'posRank_RB3']]
 
 #load saved model
 regressor = load('models/rfmodel_RB1.joblib')
@@ -746,6 +792,29 @@ header = xl2[[
 # Encode categorical features
 X = pd.get_dummies(X, columns = ['pos', 'posRank'])
 
+# Check if there were the correct number of posRanks in the dataset
+for rank in ["posRank_QB1", "posRank_QB2", "posRank_QB3"]:
+    if rank not in list(X.columns):
+        X[rank] = 0
+
+# Make sure we have the necessary columns
+X = X[['week', 'age', 'passA_curr', 'passC_curr', 'passY_curr', 'passT_curr', 'passI_curr', 'pass2_curr', 'rushA_curr', 'rushY_curr', 
+'rushT_curr', 'rush2_curr', 'recC_curr', 'recY_curr', 'recT_curr', 'rec2_curr', 'fum_curr', 'XPA_curr', 'XPM_curr', 'FGA_curr', 'FGM_curr', 
+'FG50_curr', 'defSack_curr', 'defI_curr', 'defSaf_curr', 'defFum_curr', 'defBlk_curr', 'defT_curr', 'defPtsAgainst_curr', 
+'defPassYAgainst_curr', 'defRushYAgainst_curr', 'defYdsAgainst_curr', 'gamesPlayed_curr', 'gamesPlayed_prior1', 'passA_prior1', 
+'passC_prior1', 'passY_prior1', 'passT_prior1', 'passI_prior1', 'pass2_prior1', 'rushA_prior1', 'rushY_prior1', 'rushT_prior1', 
+'rush2_prior1', 'recC_prior1', 'recY_prior1', 'recT_prior1', 'rec2_prior1', 'fum_prior1', 'XPA_prior1', 'XPM_prior1', 'FGA_prior1', 
+'FGM_prior1', 'FG50_prior1', 'defSack_prior1', 'defI_prior1', 'defSaf_prior1', 'defFum_prior1', 'defBlk_prior1', 'defT_prior1', 
+'defPtsAgainst_prior1', 'defPassYAgainst_prior1', 'defRushYAgainst_prior1', 'defYdsAgainst_prior1', 'gamesPlayed_prior2', 'passA_prior2', 
+'passC_prior2', 'passY_prior2', 'passT_prior2', 'passI_prior2', 'pass2_prior2', 'rushA_prior2', 'rushY_prior2', 'rushT_prior2', 
+'rush2_prior2', 'recC_prior2', 'recY_prior2', 'recT_prior2', 'rec2_prior2', 'fum_prior2', 'XPA_prior2', 'XPM_prior2', 'FGA_prior2', 
+'FGM_prior2', 'FG50_prior2', 'defSack_prior2', 'defI_prior2', 'defSaf_prior2', 'defFum_prior2', 'defBlk_prior2', 'defT_prior2', 
+'defPtsAgainst_prior2', 'defPassYAgainst_prior2', 'defRushYAgainst_prior2', 'defYdsAgainst_prior2', 'defSack_curr_opp', 'defI_curr_opp', 
+'defSaf_curr_opp', 'defFum_curr_opp', 'defBlk_curr_opp', 'defT_curr_opp', 'defPtsAgainst_curr_opp', 'defPassYAgainst_curr_opp', 
+'defRushYAgainst_curr_opp', 'defYdsAgainst_curr_opp', 'defSack_prior1_opp', 'defI_prior1_opp', 'defSaf_prior1_opp', 'defFum_prior1_opp', 
+'defBlk_prior1_opp', 'defT_prior1_opp', 'defPtsAgainst_prior1_opp', 'defPassYAgainst_prior1_opp', 'defRushYAgainst_prior1_opp', 
+'defYdsAgainst_prior1_opp', 'pos_QB', 'posRank_QB1', 'posRank_QB2', 'posRank_QB3']]
+
 #load saved model
 regressor = load('models/rfmodel_QB1.joblib')
 
@@ -819,6 +888,29 @@ header = xl2[[
 # Encode categorical features
 X = pd.get_dummies(X, columns = ['pos', 'posRank'])
 
+# Check if there were the correct number of posRanks in the dataset
+for rank in ["posRank_TE1", "posRank_TE2", "posRank_TE3"]:
+    if rank not in list(X.columns):
+        X[rank] = 0
+
+# Make sure we have the necessary columns
+X = X[['week', 'age', 'passA_curr', 'passC_curr', 'passY_curr', 'passT_curr', 'passI_curr', 'pass2_curr', 'rushA_curr', 'rushY_curr', 
+'rushT_curr', 'rush2_curr', 'recC_curr', 'recY_curr', 'recT_curr', 'rec2_curr', 'fum_curr', 'XPA_curr', 'XPM_curr', 'FGA_curr', 'FGM_curr', 
+'FG50_curr', 'defSack_curr', 'defI_curr', 'defSaf_curr', 'defFum_curr', 'defBlk_curr', 'defT_curr', 'defPtsAgainst_curr', 
+'defPassYAgainst_curr', 'defRushYAgainst_curr', 'defYdsAgainst_curr', 'gamesPlayed_curr', 'gamesPlayed_prior1', 'passA_prior1', 
+'passC_prior1', 'passY_prior1', 'passT_prior1', 'passI_prior1', 'pass2_prior1', 'rushA_prior1', 'rushY_prior1', 'rushT_prior1', 
+'rush2_prior1', 'recC_prior1', 'recY_prior1', 'recT_prior1', 'rec2_prior1', 'fum_prior1', 'XPA_prior1', 'XPM_prior1', 'FGA_prior1', 
+'FGM_prior1', 'FG50_prior1', 'defSack_prior1', 'defI_prior1', 'defSaf_prior1', 'defFum_prior1', 'defBlk_prior1', 'defT_prior1', 
+'defPtsAgainst_prior1', 'defPassYAgainst_prior1', 'defRushYAgainst_prior1', 'defYdsAgainst_prior1', 'gamesPlayed_prior2', 'passA_prior2', 
+'passC_prior2', 'passY_prior2', 'passT_prior2', 'passI_prior2', 'pass2_prior2', 'rushA_prior2', 'rushY_prior2', 'rushT_prior2', 
+'rush2_prior2', 'recC_prior2', 'recY_prior2', 'recT_prior2', 'rec2_prior2', 'fum_prior2', 'XPA_prior2', 'XPM_prior2', 'FGA_prior2', 
+'FGM_prior2', 'FG50_prior2', 'defSack_prior2', 'defI_prior2', 'defSaf_prior2', 'defFum_prior2', 'defBlk_prior2', 'defT_prior2', 
+'defPtsAgainst_prior2', 'defPassYAgainst_prior2', 'defRushYAgainst_prior2', 'defYdsAgainst_prior2', 'defSack_curr_opp', 'defI_curr_opp', 
+'defSaf_curr_opp', 'defFum_curr_opp', 'defBlk_curr_opp', 'defT_curr_opp', 'defPtsAgainst_curr_opp', 'defPassYAgainst_curr_opp', 
+'defRushYAgainst_curr_opp', 'defYdsAgainst_curr_opp', 'defSack_prior1_opp', 'defI_prior1_opp', 'defSaf_prior1_opp', 'defFum_prior1_opp', 
+'defBlk_prior1_opp', 'defT_prior1_opp', 'defPtsAgainst_prior1_opp', 'defPassYAgainst_prior1_opp', 'defRushYAgainst_prior1_opp', 
+'defYdsAgainst_prior1_opp', 'pos_TE', 'posRank_TE1', 'posRank_TE2', 'posRank_TE3']]
+
 #load saved model
 regressor = load('models/rfmodel_TE1.joblib')
 
@@ -891,6 +983,29 @@ header = xl2[[
 
 # Encode categorical features
 X = pd.get_dummies(X, columns = ['pos', 'posRank'])
+
+# Check if there were the correct number of posRanks in the dataset
+for rank in ["posRank_PK1", "posRank_PK2", "posRank_PK3"]:
+    if rank not in list(X.columns):
+        X[rank] = 0
+
+# Make sure we have the necessary columns
+X = X[['week', 'age', 'passA_curr', 'passC_curr', 'passY_curr', 'passT_curr', 'passI_curr', 'pass2_curr', 'rushA_curr', 'rushY_curr', 
+'rushT_curr', 'rush2_curr', 'recC_curr', 'recY_curr', 'recT_curr', 'rec2_curr', 'fum_curr', 'XPA_curr', 'XPM_curr', 'FGA_curr', 'FGM_curr', 
+'FG50_curr', 'defSack_curr', 'defI_curr', 'defSaf_curr', 'defFum_curr', 'defBlk_curr', 'defT_curr', 'defPtsAgainst_curr', 
+'defPassYAgainst_curr', 'defRushYAgainst_curr', 'defYdsAgainst_curr', 'gamesPlayed_curr', 'gamesPlayed_prior1', 'passA_prior1', 
+'passC_prior1', 'passY_prior1', 'passT_prior1', 'passI_prior1', 'pass2_prior1', 'rushA_prior1', 'rushY_prior1', 'rushT_prior1', 
+'rush2_prior1', 'recC_prior1', 'recY_prior1', 'recT_prior1', 'rec2_prior1', 'fum_prior1', 'XPA_prior1', 'XPM_prior1', 'FGA_prior1', 
+'FGM_prior1', 'FG50_prior1', 'defSack_prior1', 'defI_prior1', 'defSaf_prior1', 'defFum_prior1', 'defBlk_prior1', 'defT_prior1', 
+'defPtsAgainst_prior1', 'defPassYAgainst_prior1', 'defRushYAgainst_prior1', 'defYdsAgainst_prior1', 'gamesPlayed_prior2', 'passA_prior2', 
+'passC_prior2', 'passY_prior2', 'passT_prior2', 'passI_prior2', 'pass2_prior2', 'rushA_prior2', 'rushY_prior2', 'rushT_prior2', 
+'rush2_prior2', 'recC_prior2', 'recY_prior2', 'recT_prior2', 'rec2_prior2', 'fum_prior2', 'XPA_prior2', 'XPM_prior2', 'FGA_prior2', 
+'FGM_prior2', 'FG50_prior2', 'defSack_prior2', 'defI_prior2', 'defSaf_prior2', 'defFum_prior2', 'defBlk_prior2', 'defT_prior2', 
+'defPtsAgainst_prior2', 'defPassYAgainst_prior2', 'defRushYAgainst_prior2', 'defYdsAgainst_prior2', 'defSack_curr_opp', 'defI_curr_opp', 
+'defSaf_curr_opp', 'defFum_curr_opp', 'defBlk_curr_opp', 'defT_curr_opp', 'defPtsAgainst_curr_opp', 'defPassYAgainst_curr_opp', 
+'defRushYAgainst_curr_opp', 'defYdsAgainst_curr_opp', 'defSack_prior1_opp', 'defI_prior1_opp', 'defSaf_prior1_opp', 'defFum_prior1_opp', 
+'defBlk_prior1_opp', 'defT_prior1_opp', 'defPtsAgainst_prior1_opp', 'defPassYAgainst_prior1_opp', 'defRushYAgainst_prior1_opp', 
+'defYdsAgainst_prior1_opp', 'pos_PK', 'posRank_PK1', 'posRank_PK2', 'posRank_PK3']]
 
 #load saved model
 regressor = load('models/rfmodel_PK1.joblib')
