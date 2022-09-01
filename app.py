@@ -341,7 +341,7 @@ def waiverWire():
         'pred': 'ChopBlock Prediction',
         'sharkAbsolute': 'FantasySharks Prediction',
         'adpAbsolute': 'ADP-Based Prediction'
-    })
+    }, inplace=True)
     complete.set_index('Player', drop=True, inplace=True)
 
     return render_template("waiverWire.html", tables=[complete.to_html(classes='data')], titles=complete.columns.values)
