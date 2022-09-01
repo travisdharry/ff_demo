@@ -1219,6 +1219,10 @@ predictions
 # Account for punt returners and kick returners
 predictions.loc[predictions['KR']=='KR1', 'pred'] = predictions.loc[predictions['KR']=='KR1', 'pred'] + 58.5
 predictions.loc[predictions['PR']=='PR1', 'pred'] = predictions.loc[predictions['PR']=='PR1', 'pred'] + 25.5
+predictions.loc[predictions['KR']=='KR1', 'sharkAbsolute'] = predictions.loc[predictions['KR']=='KR1', 'sharkAbsolute'] + 58.5
+predictions.loc[predictions['PR']=='PR1', 'sharkAbsolute'] = predictions.loc[predictions['PR']=='PR1', 'sharkAbsolute'] + 25.5
+predictions.loc[predictions['KR']=='KR1', 'adpAbsolute'] = predictions.loc[predictions['KR']=='KR1', 'adpAbsolute'] + 58.5
+predictions.loc[predictions['PR']=='PR1', 'adpAbsolute'] = predictions.loc[predictions['PR']=='PR1', 'adpAbsolute'] + 25.5
 predictions
 
 # %%
