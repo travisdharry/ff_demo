@@ -12,7 +12,7 @@ from flask_login import (
     login_user,
     logout_user,
 )
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, ProcessingInstruction
 from oauthlib.oauth2 import WebApplicationClient
 import requests
 import pandas as pd
@@ -331,8 +331,18 @@ def waiverWire():
     complete = complete[complete['FranchiseID'].notna()]
     complete = complete.sort_values(by=['pred'], ascending=False)
     complete.reset_index(inplace=True, drop=True)
-
-    
+    complete = complete[['player', 'age', 'team', 'FranchiseName', 'pos', 'posRank', 'KR', 'PR', 'RES', 'pred', 'sharkAbsolute', 'adpAbsolute']]
+    complete.rename(columns={
+        'player':'Player',
+        'age':'Age',
+        'team':'Team',
+        'pos':'Position',
+        'posRank': 'Rank',
+        'pred': 'ChopBlock Prediction',
+        'sharkAbsolute': 'FantasySharks Prediction',
+        'adpAbsolute': 'ADP-Based Prediction'
+    })
+    complete.set_index('Player', drop=True, inplace=True)
 
     return render_template("waiverWire.html", tables=[complete.to_html(classes='data')], titles=complete.columns.values)
 
