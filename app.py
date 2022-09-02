@@ -481,12 +481,12 @@ def compareFranchises2():
                     "pos": ["QB", "RB", "WR", "TE", "PK", "DF"]},
                 hover_name="player",
                 hover_data={
-                    'predRelative':True, 'pred':True, 'sharkAbsolute':True, 'adpAbsolute':True,
+                    'adpRelative':True, 'pred':True, 'sharkAbsolute':True, 'adpAbsolute':True,
                     'player':False, 'pos':False, 'FranchiseName':False
                     },
                 labels={
                     "FranchiseName":"Franchise",
-                    "predRelative":"Player Value",
+                    "adpRelative":"Player Value",
                     "pred":"ChopBlock Prediction",
                     "sharkAbsolute":"FantasySharks Prediction",
                     "adpAbsolute":"ADP-Based Prediction"
@@ -558,12 +558,12 @@ def compareFranchises2():
                     "pos": ["QB", "RB", "WR", "TE", "PK", "DF"]},
                 hover_name="player",
                 hover_data={
-                    'predRelative':True, 'pred':True, 'sharkAbsolute':True, 'adpAbsolute':True,
+                    'sharkRelative':True, 'pred':True, 'sharkAbsolute':True, 'adpAbsolute':True,
                     'player':False, 'pos':False, 'FranchiseName':False
                     },
                 labels={
                     "FranchiseName":"Franchise",
-                    "predRelative":"Player Value",
+                    "sharkRelative":"Player Value",
                     "pred":"ChopBlock Prediction",
                     "sharkAbsolute":"FantasySharks Prediction",
                     "adpAbsolute":"ADP-Based Prediction"
