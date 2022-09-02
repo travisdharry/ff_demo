@@ -163,7 +163,7 @@ def franchiseCallback():
     session['user_franchise'] = user_franchise
     return redirect(url_for("landing"))
 
-@app.route('/landing', methods=['POST'])
+@app.route('/landing')
 #@login_required
 def landing():
     user_franchise = session.get('user_franchise', None)
