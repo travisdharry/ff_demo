@@ -132,11 +132,17 @@ def callback():
 def getLeague():
     return render_template("getLeague.html")
 
+@app.route("/getLeague/leagueCallback", methods=['GET', 'POST'])
+#@login_required
+def leagueCallback():
+    user_league = request.form["user_league"]
+    session['user_league'] = user_league
+    return redirect(url_for("getFranchise"))
+
 @app.route('/getFranchise', methods=['GET', 'POST'])
 #@login_required
 def getFranchise():
-    user_league = request.form["user_league"]
-    session['user_league'] = user_league
+    user_league = session.get("user_league")
 
     # Get Franchises in the league
     urlString = f"https://www54.myfantasyleague.com/2022/export?TYPE=league&L={user_league}"
@@ -150,11 +156,17 @@ def getFranchise():
 
     return render_template("getFranchise.html", franchise_list=data)
 
+@app.route("/getFranchise/franchiseCallback", methods=['GET', 'POST'])
+#@login_required
+def franchiseCallback():
+    user_franchise = request.form["FranchiseName"]
+    session['user_franchise'] = user_franchise
+    return redirect(url_for("landing"))
+
 @app.route('/landing', methods=['POST'])
 #@login_required
 def landing():
-    user_franchise = request.form["FranchiseName"]
-    session['user_franchise'] = user_franchise
+    user_franchise = session.get('user_franchise', None)
     user_league = session.get('user_league', None)
     return render_template("landing.html", user_league=user_league, user_franchise=user_franchise)
 
@@ -482,7 +494,7 @@ def compareFranchises2():
                 )
     figADP.update_layout(
                 barmode='stack', 
-                xaxis={'categoryorder':'total descending'}
+                xaxis={'categoryorder':'total descending'},
                 plot_bgcolor='rgba(0,0,0,0)',
                 title="ADP-Based Predictions",
                 font_family="Skia",
@@ -559,7 +571,7 @@ def compareFranchises2():
                 )
     figShark.update_layout(
                 barmode='stack', 
-                xaxis={'categoryorder':'total descending'}
+                xaxis={'categoryorder':'total descending'},
                 plot_bgcolor='rgba(0,0,0,0)',
                 title="FantasySharks Predictions",
                 font_family="Skia",
@@ -637,7 +649,7 @@ def compareFranchises2():
                 )
     figPred.update_layout(
                 barmode='stack', 
-                xaxis={'categoryorder':'total descending'}
+                xaxis={'categoryorder':'total descending'},
                 plot_bgcolor='rgba(0,0,0,0)',
                 title="ChopBlock Predictions",
                 font_family="Skia",

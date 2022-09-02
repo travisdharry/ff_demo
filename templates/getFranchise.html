@@ -7,7 +7,7 @@
     <title>Input Franchise</title>
 </head>
 <body>
-    <form action="/landing" method="post">
+    <form action="/getFranchise/franchiseCallback" method="post">
         <label for="franchises">Choose your franchise:</label>
             <select name="FranchiseName" id="franchises">
                 {% for franchiseID, franchiseName in franchise_list %}
