@@ -1,0 +1,40 @@
+@charset "UTF-8";
+.logo-small {
+	font-family: Antiquarian, sans-serif;
+	font-weight: 400;
+	font-style: normal;
+	font-size: xx-large;
+	text-transform: none;
+}
+.chop-nav {
+    border-bottom: 0.1px dotted #000000;
+    font-family: "American Typewriter", sans-serif;
+    color: #000000;
+}
+
+.chop-logo-sm {
+    max-width: 100%;
+    max-height: 100%;
+    height: 4em;
+    width: auto;
+}
+.logo-col {
+}
+.viewSelector {
+    color: #000000;
+    text-align: center;
+}
+.userLeague {
+    margin-top: 0%;
+    vertical-align: 0px;
+    color: #000000;
+}
+dropdown-container2 {
+    position: relative;
+    right: auto;
+}
+dropdown-menu2 {
+    position: absolute;
+    top: 400px;
+    left: 0px;
+}
