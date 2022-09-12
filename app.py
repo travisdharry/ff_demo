@@ -660,7 +660,7 @@ def compareFranchises2():
     graphJSON_pred = json.dumps(figPred, cls=plotly.utils.PlotlyJSONEncoder)
     return render_template('compareFranchises2.html', graphJSON_pred=graphJSON_pred, graphJSON_adp=graphJSON_adp, graphJSON_shark=graphJSON_shark)
 
-@app.route('liveScoring')
+@app.route('/liveScoring')
 #@login_required
 def liveScoring():
     user_league = session.get("user_league")
