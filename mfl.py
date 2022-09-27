@@ -63,3 +63,16 @@ def get_mfl_liveScoring(user_league):
     df = pd.DataFrame(data)
     df.columns = ["franchiseID", "id_mfl", "liveScore", "secondsRemaining", "status"]
     return df
+
+def get_mfl_projectedScores(user_league, week):
+    urlString = f"https://www54.myfantasyleague.com/2022/export?TYPE=projectedScores&W={week}&L={user_league}"
+    response = requests.get(urlString)
+    soup = BeautifulSoup(response.content,'xml')
+    data = []
+    elems = soup.find_all('playerScore')
+    for i in range(len(elems)):
+        rows = [elems[i].get("id"), elems[i].get("score")]
+        data.append(rows)
+    df = pd.DataFrame(data)
+    df.columns=['id_mfl','sharkProjection']
+    return df

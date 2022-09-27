@@ -8,8 +8,15 @@
 }
 .chop-nav {
     border-bottom: 0.1px dotted #000000;
-    font-family: "American Typewriter", sans-serif;
+    font-family: InputMono;
     color: #000000;
+    font-style: normal;
+    font-weight: 400;
+}
+.chop-foot {
+    font-family: InputMono;
+    color: #000000;
+    border-top-style: dotted;
 }
 
 .chop-logo-sm {
